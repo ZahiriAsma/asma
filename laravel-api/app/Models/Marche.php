@@ -52,4 +52,9 @@ class Marche extends Model
     {
         return $this->hasMany(AttachmentBc::class, 'marche_id');
     }
+
+    public function fournisseur()
+    {
+        return $this->belongsTo(Fournisseur::class, 'id_fournisseur');
+    }
 }

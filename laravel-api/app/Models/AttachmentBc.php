@@ -15,16 +15,17 @@ class AttachmentBc extends Model
         'bon_livraison_id',
         'marche_id',
         'numero_attachment',
+        'date_attachment',
         'budget',
         'exercice',
         'rubrique',
         'reference_marche',
         'lieu_livraison',
-        'numero_article',
-        'designation',
-        'unite',
-        'quantite',
-        'taux_tva'
+        'items'
+    ];
+
+    protected $casts = [
+        'items' => 'array',
     ];
 
     public function bonLivraison()

@@ -113,229 +113,217 @@ class BonCommandeController extends Controller
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Bon de Commande');
 
-        // Page setup & gridlines
-        $sheet->setShowGridlines(true);
+        // Page setup
         $sheet->getPageSetup()->setOrientation(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::ORIENTATION_PORTRAIT);
         $sheet->getPageSetup()->setPaperSize(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::PAPERSIZE_A4);
         $sheet->getPageSetup()->setFitToWidth(1);
         $sheet->getPageSetup()->setFitToHeight(0);
 
         // Column widths
-        $sheet->getColumnDimension('A')->setWidth(6);   // N°
+        $sheet->getColumnDimension('A')->setWidth(5);   // N°
         $sheet->getColumnDimension('B')->setWidth(40);  // Désignation
-        $sheet->getColumnDimension('C')->setWidth(10);  // Unité
+        $sheet->getColumnDimension('C')->setWidth(8);   // Unité
         $sheet->getColumnDimension('D')->setWidth(8);   // Qté
-        $sheet->getColumnDimension('E')->setWidth(12);  // PU HT
+        $sheet->getColumnDimension('E')->setWidth(10);  // PU HT
         $sheet->getColumnDimension('F')->setWidth(10);  // Taux TVA
         $sheet->getColumnDimension('G')->setWidth(12);  // TVA
         $sheet->getColumnDimension('H')->setWidth(14);  // Total HT
+        $sheet->getColumnDimension('I')->setWidth(35);  // Conditions
 
-        // Default Font
-        $sheet->getStyle('A1:H200')->getFont()->setName('Arial')->setSize(10);
+        $sheet->getStyle('A1:I200')->getFont()->setName('Arial')->setSize(9);
 
         // --- Left Header Block ---
-        $sheet->setCellValue('A1', 'OFFICE DE LA FORMATION');
-        $sheet->setCellValue('A2', 'PROFESSIONNELLE');
-        $sheet->setCellValue('A3', 'ET DE LA PROMOTION DU TRAVAIL');
-        $sheet->setCellValue('A4', 'Direction Régionale Draa Tafilalet');
-        $sheet->setCellValue('A5', 'ISBTP QUARTIER EL MATAR');
-        $sheet->setCellValue('A6', 'ERRACHIDIA');
-        $sheet->setCellValue('A7', 'Tél : 0535572740');
+        $sheet->mergeCells('A1:C1'); $sheet->setCellValue('A1', 'OFFICE DE LA FORMATION PROFESSIONNELLE');
+        $sheet->mergeCells('A2:C2'); $sheet->setCellValue('A2', 'ET DE LA PROMOTION DU TRAVAIL');
+        $sheet->mergeCells('A4:C4'); $sheet->setCellValue('A4', 'Direction Régionale Draa Tafilalet');
+        $sheet->mergeCells('A5:C5'); $sheet->setCellValue('A5', 'ISBTP QUARTIER EL MATAR');
+        $sheet->mergeCells('A7:C7'); $sheet->setCellValue('A7', 'ERRACHIDIA');
+        $sheet->mergeCells('A8:C8'); $sheet->setCellValue('A8', 'Tél : 0535572740');
         
-        $sheet->getStyle('A1:A3')->getFont()->setBold(true)->setSize(9);
-        $sheet->getStyle('A4:A7')->getFont()->setSize(8);
+        $sheet->getStyle('A1:C8')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('A1:C2')->getFont()->setBold(true)->setSize(8);
+        $sheet->getStyle('A4:C8')->getFont()->setBold(true)->setSize(8);
 
         // --- Middle Header Block ---
-        $sheet->mergeCells('D2:F3');
-        $sheet->setCellValue('D2', 'BON DE COMMANDE');
-        $sheet->getStyle('D2')->getFont()->setBold(true)->setSize(14);
-        $sheet->getStyle('D2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-        $sheet->getStyle('D2')->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
-        
-        // Border for D2:F3
-        $sheet->getStyle('D2:F3')->getBorders()->getOutline()->setBorderStyle(Border::BORDER_THICK);
+        $fourn = $bc->fournisseur;
+        $sheet->mergeCells('D1:G1'); $sheet->setCellValue('D1', 'Référence du Fournisseur');
+        $sheet->mergeCells('D2:G3'); $sheet->setCellValue('D2', 'Sté ' . ($fourn->raisonSociale ?? ''));
+        $sheet->mergeCells('D4:G4'); $sheet->setCellValue('D4', 'Adresse : ' . ($fourn->adresse ?? ''));
+        $sheet->mergeCells('D5:G5'); $sheet->setCellValue('D5', 'PATENTE N° : ' . ($fourn->patente ?? '') . '      RC : ' . ($fourn->rc ?? ''));
+        $sheet->mergeCells('D6:G6'); $sheet->setCellValue('D6', 'IF : ' . ($fourn->if ?? '') . '      ICE : ' . ($fourn->ice ?? ''));
+        $sheet->mergeCells('D7:G7'); $sheet->setCellValue('D7', 'RIB : ' . ($fourn->rib ?? ''));
+        $sheet->mergeCells('D8:G8'); $sheet->setCellValue('D8', 'Nous vous prions de bien vouloir exécuter la');
+        $sheet->mergeCells('D9:G9'); $sheet->setCellValue('D9', 'Présente Commande aux conditions ci-après:');
 
-        $sheet->mergeCells('D4:F4');
-        $sheet->setCellValue('D4', 'B.C PA  ' . ($bc->numeroBC ?: ''));
-        $sheet->getStyle('D4')->getFont()->setBold(true)->setSize(11);
-        $sheet->getStyle('D4')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('D1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('D2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+        $sheet->getStyle('D2')->getFont()->setBold(true);
+        $sheet->getStyle('D4:D7')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+        $sheet->getStyle('D8:D9')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        
+        // Borders for Middle block
+        $sheet->getStyle('D1:G9')->getBorders()->getOutline()->setBorderStyle(Border::BORDER_THIN);
+        $sheet->getStyle('D1:G1')->getBorders()->getBottom()->setBorderStyle(Border::BORDER_THIN);
 
         // --- Right Header Block ---
-        $fourn = $bc->fournisseur;
-        $sheet->setCellValue('G1', 'Références du Fournisseur');
-        $sheet->setCellValue('G2', 'Sté ' . ($fourn->raisonSociale ?? ''));
-        $sheet->setCellValue('G3', ($fourn->adresse ?? ''));
-        $sheet->setCellValue('G4', 'PATENTE N° : ' . ($fourn->patente ?? '') . '   RC : ' . ($fourn->rc ?? ''));
-        $sheet->setCellValue('G5', 'IF : ' . ($fourn->if ?? '') . '   ICE : ' . ($fourn->ice ?? ''));
-        $sheet->setCellValue('G6', 'RIB : ' . ($fourn->rib ?? ''));
+        $sheet->mergeCells('H1:I2'); $sheet->setCellValue('H1', 'BON DE COMMANDE');
+        $sheet->getStyle('H1')->getFont()->setBold(true)->setSize(11);
+        $sheet->getStyle('H1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+        
+        $sheet->mergeCells('H3:I3'); $sheet->setCellValue('H3', 'B.C PA  ' . ($bc->numeroBC ?: ''));
+        $sheet->getStyle('H3')->getFont()->setBold(true)->setSize(10);
+        $sheet->getStyle('H3')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
-        $sheet->getStyle('G1')->getFont()->setBold(true)->setSize(9);
-        $sheet->getStyle('G2:G6')->getFont()->setSize(8);
-        $sheet->getStyle('G1:G6')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+        // Sub-table in right block
+        $sheet->setCellValue('H4', 'BUDGET:'); $sheet->setCellValue('I4', $bc->budget ?: 'BF');
+        $sheet->setCellValue('H5', 'EXERCICE:'); $sheet->setCellValue('I5', $bc->exercice ?: date('Y'));
+        $sheet->setCellValue('H6', 'Rubrique:'); $sheet->setCellValue('I6', $bc->rubrique ?: 'ACHAT PRODUITS ALIMENTAIRES');
+        $sheet->setCellValue('H7', 'Réf MARCHE CADRE:'); $sheet->setCellValue('I7', $bc->referenceMarcheCadre ?: '');
+        $sheet->setCellValue('H8', 'LIEU DE LIVRAISON:'); $sheet->setCellValue('I8', $bc->lieuLivraison ?: 'Ouarzazate');
+        
+        $sheet->getStyle('H4:I8')->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+        $sheet->getStyle('H4:H8')->getFont()->setSize(8);
+        $sheet->getStyle('I4:I8')->getFont()->setSize(8);
+        $sheet->getStyle('H1:I8')->getBorders()->getOutline()->setBorderStyle(Border::BORDER_THICK);
 
-        // --- Metadata Block (Row 8 to 10) ---
-        // Left Box (Budget, Exercice, Rubrique)
-        $sheet->setCellValue('A8', 'Budget');
-        $sheet->mergeCells('B8:D8');
-        $sheet->setCellValue('B8', $bc->budget ?: 'BF');
+        // --- Table Headers ---
+        $sheet->mergeCells('E10:H10'); $sheet->setCellValue('E10', 'PRIX');
+        $sheet->getStyle('E10')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('E10:H10')->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+        $sheet->getStyle('E10')->getFont()->setBold(true);
 
-        $sheet->setCellValue('A9', 'Exercice');
-        $sheet->mergeCells('B9:D9');
-        $sheet->setCellValue('B9', $bc->exercice ?: date('Y'));
+        $sheet->setCellValue('A11', 'N°');
+        $sheet->setCellValue('B11', 'DESIGNATIONS ET REFERENCES');
+        $sheet->setCellValue('C11', 'UNITE');
+        $sheet->setCellValue('D11', 'QTE');
+        $sheet->setCellValue('E11', 'P.U HT');
+        $sheet->setCellValue('F11', 'Taux TVA');
+        $sheet->setCellValue('G11', 'TVA');
+        $sheet->setCellValue('H11', 'TOTAL HT');
+        $sheet->setCellValue('I11', 'CONDITIONS GENERALES');
+        
+        $sheet->mergeCells('A10:A11');
+        $sheet->mergeCells('B10:B11');
+        $sheet->mergeCells('C10:C11');
+        $sheet->mergeCells('D10:D11');
+        $sheet->mergeCells('I10:I11');
 
-        $sheet->setCellValue('A10', 'Rubrique');
-        $sheet->mergeCells('B10:D10');
-        $sheet->setCellValue('B10', $bc->rubrique ?: '');
+        $sheet->getStyle('A10:I11')->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+        $sheet->getStyle('A10:I11')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('A10:I11')->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
+        $sheet->getStyle('A10:I11')->getFont()->setBold(true)->setSize(8);
 
-        // Right Box (Ref Marche Cadre, Lieu livraison, Date livraison)
-        $sheet->setCellValue('E8', 'Réf. Marché Cadre');
-        $sheet->mergeCells('F8:H8');
-        $sheet->setCellValue('F8', $bc->referenceMarcheCadre ?: '');
-
-        $sheet->setCellValue('E9', 'Lieu de livraison');
-        $sheet->mergeCells('F9:H9');
-        $sheet->setCellValue('F9', $bc->lieuLivraison ?: '');
-
-        $sheet->setCellValue('E10', 'Date de livraison');
-        $sheet->mergeCells('F10:H10');
-        $sheet->setCellValue('F10', $bc->dateEmission ?: date('Y-m-d'));
-
-        // Format metadata headers
-        $sheet->getStyle('A8:A10')->getFont()->setBold(true)->setSize(8);
-        $sheet->getStyle('E8:E10')->getFont()->setBold(true)->setSize(8);
-        $sheet->getStyle('A8:H10')->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
-        $sheet->getStyle('A8:H10')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFF2F5F8');
-        $sheet->getStyle('B8:D10')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFFFFFFF');
-        $sheet->getStyle('F8:H10')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFFFFFFF');
-        $sheet->getStyle('A8:H10')->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
-        $sheet->getStyle('A8:H10')->getFont()->setSize(9);
-
-        // Row heights
-        $sheet->getRowDimension('8')->setRowHeight(20);
-        $sheet->getRowDimension('9')->setRowHeight(20);
-        $sheet->getRowDimension('10')->setRowHeight(20);
-
-        // --- Main Items Table Headers (Row 12) ---
-        $sheet->setCellValue('A12', 'N°');
-        $sheet->setCellValue('B12', 'Désignations et références');
-        $sheet->setCellValue('C12', 'Unité');
-        $sheet->setCellValue('D12', 'Qté');
-        $sheet->setCellValue('E12', 'P.U HT');
-        $sheet->setCellValue('F12', 'Taux TVA');
-        $sheet->setCellValue('G12', 'TVA');
-        $sheet->setCellValue('H12', 'Total HT');
-
-        $sheet->getStyle('A12:H12')->getFont()->setBold(true)->setSize(9);
-        $sheet->getStyle('A12:H12')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-        $sheet->getStyle('A12:H12')->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
-        $sheet->getStyle('A12:H12')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFD6E2E6');
-        $sheet->getStyle('A12:H12')->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_MEDIUM);
-        $sheet->getRowDimension('12')->setRowHeight(25);
-
-        // --- Items Data Rows ---
-        $currentRow = 13;
+        // --- Items Data ---
+        $row = 12;
         foreach ($items as $item) {
-            $sheet->setCellValue('A' . $currentRow, $item['price_number'] ?? '');
-            $sheet->setCellValue('B' . $currentRow, $item['service_description'] ?? ($item['designation'] ?? ($item['label'] ?? '')));
-            $sheet->setCellValue('C' . $currentRow, $item['unit_of_measure'] ?? ($item['unit'] ?? 'Unité'));
-            $sheet->setCellValue('D' . $currentRow, $item['qty'] ?? ($item['quantity'] ?? 0));
-            $sheet->setCellValue('E' . $currentRow, $item['unit_price_ht'] ?? ($item['price'] ?? ($item['unit_price'] ?? ($item['pu'] ?? 0))));
+            $sheet->setCellValue('A' . $row, $item['price_number'] ?? '');
+            $sheet->setCellValue('B' . $row, $item['service_description'] ?? ($item['designation'] ?? ($item['label'] ?? '')));
+            $sheet->setCellValue('C' . $row, $item['unit_of_measure'] ?? ($item['unit'] ?? 'Unité'));
+            $sheet->setCellValue('D' . $row, $item['qty'] ?? ($item['quantity'] ?? 0));
+            $sheet->setCellValue('E' . $row, $item['unit_price_ht'] ?? ($item['price'] ?? ($item['unit_price'] ?? ($item['pu'] ?? 0))));
             
-            // Format VAT rate as numeric percentage
             $vatRate = isset($item['vat_rate']) ? (float)str_replace('%', '', $item['vat_rate']) : 20;
-            $sheet->setCellValue('F' . $currentRow, $vatRate / 100);
+            $sheet->setCellValue('F' . $row, $vatRate / 100);
 
-            // Formulas for TVA and Total HT
-            $sheet->setCellValue('G' . $currentRow, '=D' . $currentRow . '*E' . $currentRow . '*F' . $currentRow);
-            $sheet->setCellValue('H' . $currentRow, '=D' . $currentRow . '*E' . $currentRow);
+            $sheet->setCellValue('G' . $row, '=IF(F'.$row.'=0,"-",D' . $row . '*E' . $row . '*F' . $row.')');
+            $sheet->setCellValue('H' . $row, '=D' . $row . '*E' . $row);
 
-            // Alignments & formats
-            $sheet->getStyle('A' . $currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            $sheet->getStyle('B' . $currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
-            $sheet->getStyle('C' . $currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            $sheet->getStyle('D' . $currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            $sheet->getStyle('E' . $currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-            $sheet->getStyle('F' . $currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            $sheet->getStyle('G' . $currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-            $sheet->getStyle('H' . $currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+            // Background color for Qté
+            $sheet->getStyle('D'.$row)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFD9E1F2');
 
             // Formatting
-            $sheet->getStyle('E' . $currentRow)->getNumberFormat()->setFormatCode('#,##0.00" MAD"');
-            $sheet->getStyle('F' . $currentRow)->getNumberFormat()->setFormatCode('0%');
-            $sheet->getStyle('G' . $currentRow)->getNumberFormat()->setFormatCode('#,##0.00" MAD"');
-            $sheet->getStyle('H' . $currentRow)->getNumberFormat()->setFormatCode('#,##0.00" MAD"');
-
-            // Borders
-            $sheet->getStyle('A' . $currentRow . ':H' . $currentRow)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+            $sheet->getStyle('E' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+            $sheet->getStyle('F' . $row)->getNumberFormat()->setFormatCode('0%');
+            $sheet->getStyle('G' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+            $sheet->getStyle('H' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
             
-            $sheet->getRowDimension($currentRow)->setRowHeight(20);
-            $currentRow++;
+            $sheet->getStyle('A'.$row.':H'.$row)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+            
+            $sheet->getStyle('A' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle('B' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)->setWrapText(true);
+            $sheet->getStyle('C' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle('D' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+            $row++;
         }
 
-        // --- Totals Block ---
-        $lastDataRow = $currentRow - 1;
-        $totalsStartRow = $currentRow + 1;
-
-        // Total H.T
-        $sheet->mergeCells('E' . $totalsStartRow . ':G' . $totalsStartRow);
-        $sheet->setCellValue('E' . $totalsStartRow, 'Total H.T');
-        $sheet->setCellValue('H' . $totalsStartRow, '=SUM(H13:H' . $lastDataRow . ')');
-
-        // VAT categories
-        $vatRatesToCheck = [0, 9, 10, 20];
-        $totalRowOffset = 1;
-        foreach ($vatRatesToCheck as $rate) {
-            $r = $totalsStartRow + $totalRowOffset;
-            $sheet->mergeCells('E' . $r . ':G' . $r);
-            $sheet->setCellValue('E' . $r, 'TVA ' . $rate . '%');
-            // SUMIF over VAT Rate column
-            $sheet->setCellValue('H' . $r, '=SUMIF(F13:F' . $lastDataRow . ', ' . ($rate / 100) . ', G13:G' . $lastDataRow . ')');
-            $totalRowOffset++;
+        // If no items, ensure at least one row for structure
+        if ($row == 12) {
+            $sheet->getStyle('A12:H12')->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+            $row++;
         }
 
-        // Total T.T.C
-        $ttcRow = $totalsStartRow + $totalRowOffset;
-        $sheet->mergeCells('E' . $ttcRow . ':G' . $ttcRow);
-        $sheet->setCellValue('E' . $ttcRow, 'Total T.T.C');
-        // TTC = Total HT + SUM(TVA)
-        $sheet->setCellValue('H' . $ttcRow, '=H' . $totalsStartRow . '+SUM(G13:G' . $lastDataRow . ')');
+        $lastItemRow = $row - 1;
 
-        // Formatting Totals Block
-        $totalBoxRange = 'E' . $totalsStartRow . ':H' . $ttcRow;
-        $sheet->getStyle($totalBoxRange)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
-        $sheet->getStyle($totalBoxRange)->getFont()->setBold(true)->setSize(9);
+        // --- Conditions Generales ---
+        $sheet->mergeCells('I12:I'.$lastItemRow);
+        $conditionsDefault = "1- L'acceptation de la commande d'achat entraîne pour le fournisseur l'obligation de se conformer aux conditions générales et particulières de cette commande.\n2- Toute livraison doit faire l'objet d'un bon de livraison en 3 exemplaires.\n3- Les délais de réception indiqués sur notre Commande s'entendent pour marchandises rendues au lieu de livraison.\n4- La réception définitive des marchandises est subordonnée à leur acceptation par nos services et la quantité à livrer doit être égale à celle indiquée sur la commande d'achat.\n5- Les prix s'entendent toutes taxes comprises d'une seule facturation de 3 exemplaires.\n6- Toute commande doit faire l'objet dans la mesure du possible.";
+        $sheet->setCellValue('I12', $bc->conditionsGenerales ?? $conditionsDefault);
+        $sheet->getStyle('I12')->getAlignment()->setVertical(Alignment::VERTICAL_TOP);
+        $sheet->getStyle('I12')->getAlignment()->setWrapText(true);
+        $sheet->getStyle('I12')->getFont()->setSize(7);
+        $sheet->getStyle('I12:I'.$lastItemRow)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+
+        // --- Totals ---
+        $totalsStart = $row;
         
-        // Right align values
-        $sheet->getStyle('H' . $totalsStartRow . ':H' . $ttcRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-        $sheet->getStyle('H' . $totalsStartRow . ':H' . $ttcRow)->getNumberFormat()->setFormatCode('#,##0.00" MAD"');
+        $sheet->mergeCells('D'.$totalsStart.':G'.$totalsStart); $sheet->setCellValue('D'.$totalsStart, 'TOTAL H.T');
+        $sheet->setCellValue('H'.$totalsStart, '=SUM(H12:H'.$lastItemRow.')');
         
-        // Left align descriptions
-        $sheet->getStyle('E' . $totalsStartRow . ':E' . $ttcRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
-
-        // Double border for TTC row
-        $sheet->getStyle('E' . $ttcRow . ':H' . $ttcRow)->getBorders()->getBottom()->setBorderStyle(Border::BORDER_DOUBLE);
+        $totalsStart++;
+        $sheet->mergeCells('D'.$totalsStart.':G'.$totalsStart); $sheet->setCellValue('D'.$totalsStart, 'TVA 9 %');
+        $sheet->setCellValue('H'.$totalsStart, '=SUMIF(F12:F'.$lastItemRow.', 0.09, G12:G'.$lastItemRow.')');
         
-        // Background color for TTC cell
-        $sheet->getStyle('E' . $ttcRow . ':H' . $ttcRow)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFECFDF5');
-        $sheet->getStyle('E' . $ttcRow . ':H' . $ttcRow)->getFont()->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color(\PhpOffice\PhpSpreadsheet\Style\Color::COLOR_DARKGREEN));
+        $totalsStart++;
+        $sheet->mergeCells('D'.$totalsStart.':G'.$totalsStart); $sheet->setCellValue('D'.$totalsStart, 'TVA 10 %');
+        $sheet->setCellValue('H'.$totalsStart, '=SUMIF(F12:F'.$lastItemRow.', 0.10, G12:G'.$lastItemRow.')');
+        
+        $totalsStart++;
+        $sheet->mergeCells('D'.$totalsStart.':G'.$totalsStart); $sheet->setCellValue('D'.$totalsStart, 'TVA 20 %');
+        $sheet->setCellValue('H'.$totalsStart, '=SUMIF(F12:F'.$lastItemRow.', 0.20, G12:G'.$lastItemRow.')');
+        
+        $totalsStart++;
+        $ttcRow = $totalsStart;
+        $sheet->mergeCells('D'.$ttcRow.':G'.$ttcRow); $sheet->setCellValue('D'.$ttcRow, 'TOTAL T.T.C');
+        $sheet->setCellValue('H'.$ttcRow, '=H'.($row).'+H'.($row+1).'+H'.($row+2).'+H'.($row+3));
 
-        // --- Signature and bottom info ---
-        $signatureRow = $ttcRow + 3;
-        $sheet->setCellValue('A' . $signatureRow, 'Nous vous prions de bien vouloir exécuter la');
-        $sheet->setCellValue('A' . ($signatureRow + 1), 'présente commande aux conditions ci-après.');
-        $sheet->getStyle('A' . $signatureRow . ':A' . ($signatureRow + 1))->getFont()->setItalic(true)->setSize(8);
+        $sheet->getStyle('D'.$row.':H'.$ttcRow)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+        $sheet->getStyle('D'.$row.':G'.$ttcRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('H'.$row.':H'.$ttcRow)->getNumberFormat()->setFormatCode('#,##0.00');
+        $sheet->getStyle('D'.$row.':H'.$ttcRow)->getFont()->setBold(true);
 
-        $sheet->mergeCells('F' . $signatureRow . ':H' . $signatureRow);
-        $sheet->setCellValue('F' . $signatureRow, 'Errachidia, le ' . date('d/m/Y', strtotime($bc->dateEmission)));
-        $sheet->getStyle('F' . $signatureRow)->getFont()->setSize(9);
-        $sheet->getStyle('F' . $signatureRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        // Date Livraison (Left of Totals)
+        $sheet->mergeCells('A'.$row.':C'.$ttcRow);
+        $sheet->setCellValue('A'.$row, 'Date Livraison :');
+        $sheet->getStyle('A'.$row.':C'.$ttcRow)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+        $sheet->getStyle('A'.$row)->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
+        $sheet->getStyle('A'.$row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+        $sheet->getStyle('A'.$row)->getFont()->setItalic(true)->setSize(8);
 
-        $sheet->mergeCells('F' . ($signatureRow + 2) . ':H' . ($signatureRow + 2));
-        $sheet->setCellValue('F' . ($signatureRow + 2), 'LE SOUS-ORDONNATEUR');
-        $sheet->getStyle('F' . ($signatureRow + 2))->getFont()->setBold(true)->setSize(9);
-        $sheet->getStyle('F' . ($signatureRow + 2))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        // Conditions Particulieres (Right of Totals)
+        $sheet->mergeCells('I'.$row.':I'.$ttcRow);
+        $sheet->setCellValue('I'.$row, "CONDITIONS PARTICULIERES\n\n" . ($bc->conditionsParticulieres ?? ''));
+        $sheet->getStyle('I'.$row.':I'.$ttcRow)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+        $sheet->getStyle('I'.$row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('I'.$row)->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
+        $sheet->getStyle('I'.$row)->getAlignment()->setWrapText(true);
+        $sheet->getStyle('I'.$row)->getFont()->setSize(8);
 
-        // Create Writer & Output stream
+        // --- Footer ---
+        $footerRow = $ttcRow + 2;
+        $sheet->mergeCells('D'.$footerRow.':I'.$footerRow);
+        $sheet->setCellValue('D'.$footerRow, 'Errachidia, le ' . date('d/m/Y', strtotime($bc->dateEmission)));
+        $sheet->getStyle('D'.$footerRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+        $footerRow += 2;
+        $sheet->mergeCells('D'.$footerRow.':I'.$footerRow);
+        $sheet->setCellValue('D'.$footerRow, 'LE SOUS ORDONNATEUR');
+        $sheet->getStyle('D'.$footerRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('D'.$footerRow)->getFont()->setBold(true);
+
+        // Outline around the entire main content to match image a bit more
+        $sheet->getStyle('A10:I'.$ttcRow)->getBorders()->getOutline()->setBorderStyle(Border::BORDER_THICK);
+
         $writer = new Xlsx($spreadsheet);
         $filename = 'Bon_de_Commande_' . str_replace('/', '_', $bc->numeroBC) . '.xlsx';
 

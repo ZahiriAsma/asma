@@ -35,6 +35,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/bordereau/{id}', [\App\Http\Controllers\Api\BordereauController::class, 'destroy']);
 
     // Factures routes
+    Route::get('/factures/{id}/export', [\App\Http\Controllers\FactureController::class, 'export']);
     Route::apiResource('factures', \App\Http\Controllers\FactureController::class);
 
     // Attachment BC routes

@@ -27,52 +27,17 @@ class AttachmentBcController extends Controller
 
     public function store(Request $request)
     {
-        if ($request->has('items') && is_array($request->items)) {
-            $request->validate([
-                'bon_livraison_id' => 'required|exists:bons_livraison,id',
-                'numero_attachment' => 'required|integer',
-                'marche_id' => 'nullable|exists:marches,id',
-                'items.*.numero_article' => 'required|integer',
-                'items.*.designation' => 'required|string',
-            ]);
-
-            AttachmentBc::where('bon_livraison_id', $request->bon_livraison_id)->delete();
-
-            $created = [];
-            foreach ($request->items as $item) {
-                $created[] = AttachmentBc::create([
-                    'bon_livraison_id' => $request->bon_livraison_id,
-                    'numero_attachment' => $request->numero_attachment,
-                    'marche_id' => $request->marche_id,
-                    'budget' => $request->budget ?? 'BF',
-                    'exercice' => $request->exercice ?? date('Y'),
-                    'rubrique' => $request->rubrique ?? 'ACHAT',
-                    'reference_marche' => $request->reference_marche ?? '',
-                    'lieu_livraison' => $request->lieu_livraison ?? '',
-                    'numero_article' => $item['numero_article'],
-                    'designation' => $item['designation'],
-                    'unite' => $item['unite'] ?? 'U',
-                    'quantite' => $item['quantite'] ?? 1,
-                    'taux_tva' => $item['taux_tva'] ?? 0,
-                ]);
-            }
-            return response()->json($created, 201);
-        }
-
         $validated = $request->validate([
             'bon_livraison_id' => 'required|exists:bons_livraison,id',
             'numero_attachment' => 'required|integer',
             'marche_id' => 'nullable|exists:marches,id',
-            'budget' => 'required|string',
-            'exercice' => 'required|integer',
-            'rubrique' => 'required|string',
+            'date_attachment' => 'nullable|date',
+            'budget' => 'nullable|string',
+            'exercice' => 'nullable|integer',
+            'rubrique' => 'nullable|string',
             'reference_marche' => 'nullable|string',
-            'lieu_livraison' => 'required|string',
-            'numero_article' => 'required|integer',
-            'designation' => 'required|string',
-            'unite' => 'required|string',
-            'quantite' => 'required|numeric',
-            'taux_tva' => 'required|numeric'
+            'lieu_livraison' => 'nullable|string',
+            'items' => 'nullable|array'
         ]);
 
         $attachment = AttachmentBc::create($validated);
@@ -87,16 +52,13 @@ class AttachmentBcController extends Controller
             'bon_livraison_id' => 'nullable|exists:bons_livraison,id',
             'numero_attachment' => 'nullable|integer',
             'marche_id' => 'nullable|exists:marches,id',
+            'date_attachment' => 'nullable|date',
             'budget' => 'nullable|string',
             'exercice' => 'nullable|integer',
             'rubrique' => 'nullable|string',
             'reference_marche' => 'nullable|string',
             'lieu_livraison' => 'nullable|string',
-            'numero_article' => 'nullable|integer',
-            'designation' => 'nullable|string',
-            'unite' => 'nullable|string',
-            'quantite' => 'nullable|numeric',
-            'taux_tva' => 'nullable|numeric'
+            'items' => 'nullable|array'
         ]);
 
         $attachment->update($validated);
@@ -113,7 +75,13 @@ class AttachmentBcController extends Controller
     public function export($bon_livraison_id)
     {
         $bl = BonLivraison::findOrFail($bon_livraison_id);
-        $attachments = AttachmentBc::where('bon_livraison_id', $bon_livraison_id)->get();
+        $attachment = AttachmentBc::where('bon_livraison_id', $bon_livraison_id)->first();
+
+        if (!$attachment) {
+            return response()->json(['error' => 'Aucun attachement trouvé pour ce bon de livraison.'], 404);
+        }
+
+        $items = is_string($attachment->items) ? json_decode($attachment->items, true) : ($attachment->items ?? []);
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
@@ -155,19 +123,19 @@ class AttachmentBcController extends Controller
         $sheet->mergeCells('A6:B6');
 
         // --- Right Header Block (Date) ---
-        $sheet->setCellValue('D1', 'Errachidia, le ' . date('d/m/Y'));
+        $dateAttachment = $attachment->date_attachment ? date('d/m/Y', strtotime($attachment->date_attachment)) : date('d/m/Y');
+        $sheet->setCellValue('D1', 'Errachidia, le ' . $dateAttachment);
         $sheet->getStyle('D1')->getFont()->setSize(9);
         $sheet->getStyle('D1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
         $sheet->mergeCells('D1:E1');
 
-        // Extract header data from first row
-        $firstAtt = $attachments->first();
-        $num_att = $firstAtt ? $firstAtt->numero_attachment : '';
-        $budget = $firstAtt ? $firstAtt->budget : 'BF';
-        $exercice = $firstAtt ? $firstAtt->exercice : date('Y');
-        $rubrique = $firstAtt ? $firstAtt->rubrique : 'ACHAT PRODUITS ALIMENTAIRES';
-        $ref_marche = $firstAtt ? $firstAtt->reference_marche : 'N° 07-Z-2024';
-        $lieu_livraison = $firstAtt ? $firstAtt->lieu_livraison : 'Ouarzazate';
+        // Extract header data
+        $num_att = $attachment->numero_attachment ?? '';
+        $budget = $attachment->budget ?? 'BF';
+        $exercice = $attachment->exercice ?? date('Y');
+        $rubrique = $attachment->rubrique ?? 'ACHAT PRODUITS ALIMENTAIRES';
+        $ref_marche = $attachment->reference_marche ?? 'N° 07-Z-2024';
+        $lieu_livraison = $attachment->lieu_livraison ?? 'Ouarzazate';
 
         // --- Title Block ---
         $sheet->setCellValue('C3', 'ATTACHEMENT N° : ' . $num_att . '/' . $exercice);
@@ -221,14 +189,15 @@ class AttachmentBcController extends Controller
 
         // --- Items Data Rows ---
         $currentRow = 13;
-        foreach ($attachments as $att) {
-            $sheet->setCellValue('A' . $currentRow, $att->numero_article);
-            $sheet->setCellValue('B' . $currentRow, $att->designation);
-            $sheet->setCellValue('C' . $currentRow, $att->unite);
-            $sheet->setCellValue('D' . $currentRow, $att->quantite);
+        foreach ($items as $item) {
+            $sheet->setCellValue('A' . $currentRow, $item['numero_article'] ?? $item['price_number'] ?? '');
+            $sheet->setCellValue('B' . $currentRow, $item['designation'] ?? $item['service_description'] ?? '');
+            $sheet->setCellValue('C' . $currentRow, $item['unite'] ?? $item['unit_of_measure'] ?? 'U');
+            $sheet->setCellValue('D' . $currentRow, $item['quantite'] ?? $item['qty'] ?? 1);
             
             // Format TVA e.g., 20.00 -> 20%
-            $tvaFormatted = floatval($att->taux_tva) . '%';
+            $tva = $item['taux_tva'] ?? $item['vat_rate'] ?? 20;
+            $tvaFormatted = floatval($tva) . '%';
             $sheet->setCellValue('E' . $currentRow, $tvaFormatted);
 
             // Alignments

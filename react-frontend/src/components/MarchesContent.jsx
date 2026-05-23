@@ -50,6 +50,68 @@ const calculateVatBreakdown = (items) => {
   };
 };
 
+const numberToFrenchWords = (num) => {
+  if (num === 0) return 'Zéro Dirhams';
+  
+  const unities = ['', 'Un', 'Deux', 'Trois', 'Quatre', 'Cinq', 'Six', 'Sept', 'Huit', 'Neuf'];
+  const teens = ['Dix', 'Onze', 'Douze', 'Treize', 'Quatorze', 'Quinze', 'Seize', 'Dix-Sept', 'Dix-Huit', 'Dix-Neuf'];
+  const tens = ['', 'Dix', 'Vingt', 'Trente', 'Quarante', 'Cinquante', 'Soixante', 'Soixante-Dix', 'Quatre-Vingt', 'Quatre-Vingt-Dix'];
+  
+  const convertBelow100 = (n) => {
+    if (n < 10) return unities[n];
+    if (n < 20) return teens[n - 10];
+    let tenDigit = Math.floor(n / 10);
+    let unitDigit = n % 10;
+    if (tenDigit === 7 || tenDigit === 9) {
+      return tens[tenDigit - 1] + (unitDigit === 1 && tenDigit === 7 ? ' et Onze' : '-' + teens[unitDigit]);
+    }
+    if (unitDigit === 0) return tens[tenDigit];
+    if (unitDigit === 1) return tens[tenDigit] + ' et Un';
+    return tens[tenDigit] + '-' + unities[unitDigit];
+  };
+
+  const convertBelow1000 = (n) => {
+    if (n < 100) return convertBelow100(n);
+    let hundredDigit = Math.floor(n / 100);
+    let rest = n % 100;
+    let hundredStr = hundredDigit === 1 ? 'Cent' : unities[hundredDigit] + ' Cent';
+    if (rest === 0) return hundredStr + (hundredDigit > 1 && hundredStr !== 'Cent' ? 's' : '');
+    return hundredStr + ' ' + convertBelow100(rest);
+  };
+
+  let intPart = Math.floor(num);
+  let decPart = Math.round((num - intPart) * 100);
+  let result = '';
+  
+  if (intPart >= 1000000) {
+    let millions = Math.floor(intPart / 1000000);
+    result += convertBelow1000(millions) + ' Million' + (millions > 1 ? 's ' : ' ');
+    intPart %= 1000000;
+  }
+  
+  if (intPart >= 1000) {
+    let thousands = Math.floor(intPart / 1000);
+    if (thousands === 1) {
+      result += 'Mille ';
+    } else {
+      result += convertBelow1000(thousands) + ' Mille ';
+    }
+    intPart %= 1000;
+  }
+  
+  if (intPart > 0 || result === '') {
+    result += convertBelow1000(intPart);
+  }
+  
+  result = result.trim() + ' Dirhams';
+  
+  if (decPart > 0) {
+    result += ' et ' + convertBelow100(decPart) + ' Centimes';
+  }
+  
+  return result;
+};
+
 const MarchesContent = () => {
   const [marches, setMarches] = useState([]);
   const [fournisseurs, setFournisseurs] = useState([]);
@@ -61,25 +123,7 @@ const MarchesContent = () => {
   });
   const [activeMarchesTab, setActiveMarchesTab] = useState('actifs');
   const [submitting, setSubmitting] = useState(false);
-  const [selectedMarche, setSelectedMarche] = useState(() => {
-    const saved = localStorage.getItem('selectedMarche');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        return null;
-      }
-    }
-    return null;
-  });
-
-  useEffect(() => {
-    if (selectedMarche) {
-      localStorage.setItem('selectedMarche', JSON.stringify(selectedMarche));
-    } else {
-      localStorage.removeItem('selectedMarche');
-    }
-  }, [selectedMarche]);
+  const [selectedMarche, setSelectedMarche] = useState(null);
   const [activeDocTab, setActiveDocTab] = useState('bc');
 
   // Dynamic state for Bons de commande documents (now loaded from database)
@@ -156,11 +200,17 @@ const MarchesContent = () => {
     date_facture: new Date().toISOString().split('T')[0],
     client: 'OFPPT / ISTA Ouarzazate',
     reference_bl: '',
+    reference_bc: '',
+    site_livraison: 'ISTA Ouarzazate',
     conditions_generales: 'Paiement à réception de la facture.',
     conditions_particulieres: '',
     montantHT: '0.00',
     montantTVA: '0.00',
+    tva_9: '0.00',
+    tva_10: '0.00',
+    tva_20: '0.00',
     montantTTC: '0.00',
+    montant_lettres: '',
     statut: 'En cours',
     items: []
   });
@@ -284,20 +334,6 @@ const MarchesContent = () => {
     try {
       const response = await api.get('/marches');
       setMarches(response.data);
-      
-      // Update selectedMarche if it exists in the fetched data
-      const savedMarcheStr = localStorage.getItem('selectedMarche');
-      if (savedMarcheStr) {
-        try {
-          const parsed = JSON.parse(savedMarcheStr);
-          const updatedMarche = response.data.find(m => m.id === parsed.id);
-          if (updatedMarche) {
-            setSelectedMarche(updatedMarche);
-          }
-        } catch (e) {
-          // ignore
-        }
-      }
       
       setLoading(false);
     } catch (error) {
@@ -939,23 +975,30 @@ const MarchesContent = () => {
     }
   };
 
-  // --- Factures Helper Functions ---
   const recalculateFactureTotals = (itemsList) => {
     let ht = 0;
-    let tva = 0;
+    let tva9 = 0, tva10 = 0, tva20 = 0;
     itemsList.forEach(item => {
       const itemHt = (parseFloat(item.qte) || 0) * (parseFloat(item.pu_ht) || 0);
-      const itemTva = itemHt * ((parseFloat(item.taux_tva) || 0) / 100);
+      const rate = parseFloat(item.taux_tva) || 0;
+      const itemTva = itemHt * (rate / 100);
       ht += itemHt;
-      tva += itemTva;
+      if (rate === 9) tva9 += itemTva;
+      else if (rate === 10) tva10 += itemTva;
+      else if (rate === 20) tva20 += itemTva;
     });
-    const ttc = ht + tva;
+    const totalTva = tva9 + tva10 + tva20;
+    const ttc = ht + totalTva;
     setNewFactureData(prev => ({
       ...prev,
       items: itemsList,
       montantHT: ht.toFixed(2),
-      montantTVA: tva.toFixed(2),
-      montantTTC: ttc.toFixed(2)
+      montantTVA: totalTva.toFixed(2),
+      tva_9: tva9.toFixed(2),
+      tva_10: tva10.toFixed(2),
+      tva_20: tva20.toFixed(2),
+      montantTTC: ttc.toFixed(2),
+      montant_lettres: numberToFrenchWords(ttc)
     }));
   };
 
@@ -1022,11 +1065,17 @@ const MarchesContent = () => {
         date_facture: newFactureData.date_facture,
         client: newFactureData.client,
         reference_bl: newFactureData.reference_bl,
+        reference_bc: newFactureData.reference_bc,
+        site_livraison: newFactureData.site_livraison,
+        montant_lettres: newFactureData.montant_lettres,
         marche_id: selectedMarche ? selectedMarche.id : null,
         conditions_generales: newFactureData.conditions_generales,
         conditions_particulieres: newFactureData.conditions_particulieres,
         total_ht: newFactureData.montantHT,
         tva: newFactureData.montantTVA,
+        tva_9: newFactureData.tva_9,
+        tva_10: newFactureData.tva_10,
+        tva_20: newFactureData.tva_20,
         total_ttc: newFactureData.montantTTC,
         statut: newFactureData.statut,
         articles: newFactureData.items
@@ -1056,9 +1105,29 @@ const MarchesContent = () => {
     }
   };
 
-  const handleExportFactureToExcel = (facture) => {
-    // Basic export or api call if implemented on backend
-    alert("Fonctionnalité d'export Excel de la facture " + facture.numero_facture + " en cours d'intégration.");
+  const handleExportFactureToExcel = async (facture) => {
+    if (!facture || !facture.id) {
+      alert("Impossible d'exporter une facture sans identifiant.");
+      return;
+    }
+    try {
+      const response = await api.get(`/factures/${facture.id}/export`, {
+        responseType: 'blob'
+      });
+      const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const cleanNum = facture.numero_facture ? facture.numero_facture.replace(/[\/\s]/g, '_') : facture.id;
+      link.setAttribute('download', `Facture_${cleanNum}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Erreur lors de l'exportation Excel :", error);
+      alert("Erreur lors de l'exportation de la facture.");
+    }
   };
 
 
@@ -1621,12 +1690,18 @@ const MarchesContent = () => {
                   numero_facture: `FA-${new Date().getFullYear()}-00${factures.length + 1}`,
                   date_facture: new Date().toISOString().split('T')[0],
                   client: 'OFPPT / ISTA Ouarzazate',
+                  site_livraison: 'ISTA Ouarzazate',
                   reference_bl: '',
+                  reference_bc: '',
                   conditions_generales: 'Paiement à réception de la facture.',
                   conditions_particulieres: '',
                   montantHT: '0.00',
                   montantTVA: '0.00',
+                  tva_9: '0.00',
+                  tva_10: '0.00',
+                  tva_20: '0.00',
                   montantTTC: '0.00',
+                  montant_lettres: '',
                   statut: 'En cours',
                   items: []
                 });
@@ -1723,13 +1798,19 @@ const MarchesContent = () => {
                               setNewFactureData({
                                 numero_facture: facture.numero_facture,
                                 date_facture: facture.date_facture ? facture.date_facture.split('T')[0] : '',
-                                client: facture.client,
-                                reference_bl: facture.reference_bl,
+                                client: facture.client || 'OFPPT / ISTA Ouarzazate',
+                                site_livraison: facture.site_livraison || '',
+                                reference_bl: facture.reference_bl || '',
+                                reference_bc: facture.reference_bc || '',
                                 conditions_generales: facture.conditions_generales,
                                 conditions_particulieres: facture.conditions_particulieres,
                                 montantHT: facture.total_ht,
                                 montantTVA: facture.tva,
+                                tva_9: facture.tva_9 || '0.00',
+                                tva_10: facture.tva_10 || '0.00',
+                                tva_20: facture.tva_20 || '0.00',
                                 montantTTC: facture.total_ttc,
+                                montant_lettres: facture.montant_lettres || '',
                                 statut: facture.statut,
                                 items: facture.articles || []
                               });
@@ -1756,6 +1837,30 @@ const MarchesContent = () => {
                             }}
                           >
                             <Edit2 size={15} />
+                          </button>
+                          <button
+                            onClick={() => handleExportFactureToExcel(facture)}
+                            title="Télécharger Excel"
+                            style={{
+                              width: '32px', height: '32px',
+                              borderRadius: '8px',
+                              border: '1px solid rgba(16, 185, 129, 0.18)',
+                              backgroundColor: 'rgba(16, 185, 129, 0.05)',
+                              color: '#10b981',
+                              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = '#10b981';
+                              e.currentTarget.style.color = '#ffffff';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = 'rgba(16, 185, 129, 0.05)';
+                              e.currentTarget.style.color = '#10b981';
+                            }}
+                          >
+                            <Download size={15} />
                           </button>
                           <button
                             onClick={() => handleDeleteFacture(facture.id)}
@@ -3670,7 +3775,7 @@ const MarchesContent = () => {
 
             <form onSubmit={handleSaveFacture} style={{ display: 'flex', flexDirection: 'column', gap: '32px', overflowY: 'auto', overflowX: 'hidden', flex: 1, paddingRight: '12px' }}>
               {/* General Information Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '32px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>N° de Facture *</label>
                   <input
@@ -3693,12 +3798,57 @@ const MarchesContent = () => {
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Client</label>
+                  <select
+                    value={newFactureData.client}
+                    onChange={(e) => {
+                      const client = e.target.value;
+                      const site = client === 'OFPPT / ISTA Ouarzazate' ? 'ISTA Ouarzazate' : 'ISTA Errachidia';
+                      setNewFactureData({ ...newFactureData, client, site_livraison: site });
+                    }}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155', boxSizing: 'border-box', backgroundColor: 'white' }}
+                  >
+                    <option value="OFPPT / ISTA Ouarzazate">OFPPT / ISTA Ouarzazate</option>
+                    <option value="OFPPT / ISTA Errachidia">OFPPT / ISTA Errachidia</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Site de livraison</label>
                   <input
                     type="text"
-                    value={newFactureData.client}
-                    onChange={(e) => setNewFactureData({ ...newFactureData, client: e.target.value })}
-                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155', boxSizing: 'border-box' }}
+                    value={newFactureData.site_livraison}
+                    readOnly
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #e2e8f0', outline: 'none', fontSize: '13px', color: '#64748b', boxSizing: 'border-box', backgroundColor: '#f8fafc' }}
                   />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Réf. Bon de Commande (BC)</label>
+                  <select
+                    value={newFactureData.reference_bc}
+                    onChange={(e) => {
+                      const bcNum = e.target.value;
+                      const selectedBc = providerBcs.find(bc => bc.numeroBC === bcNum);
+                      if (selectedBc && selectedBc.items && selectedBc.items.length > 0) {
+                        const bcItems = selectedBc.items.map(item => ({
+                          num_article: item.price_number || '',
+                          designation: item.service_description || item.designation || '',
+                          unite: item.unit_of_measure || item.unite || 'U',
+                          qte: parseFloat(item.qty || item.qte || 1),
+                          pu_ht: parseFloat(item.unit_price_ht || item.pu_ht || 0),
+                          taux_tva: parseFloat(item.vat_rate || item.taux_tva || 20)
+                        }));
+                        recalculateFactureTotals(bcItems);
+                        setNewFactureData(prev => ({ ...prev, reference_bc: bcNum }));
+                      } else {
+                        setNewFactureData(prev => ({ ...prev, reference_bc: bcNum }));
+                      }
+                    }}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155', boxSizing: 'border-box', backgroundColor: 'white' }}
+                  >
+                    <option value="">-- Sélectionner un BC --</option>
+                    {providerBcs.map(bc => (
+                      <option key={bc.id} value={bc.numeroBC}>{bc.numeroBC} ({new Date(bc.dateEmission).toLocaleDateString('fr-FR')})</option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Réf. Bon de Livraison</label>
@@ -3827,20 +3977,31 @@ const MarchesContent = () => {
                 </div>
               </div>
 
-              {/* Totals Section */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <div style={{ width: '300px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '13px', fontWeight: '600', color: '#475569' }}>Total HT:</span>
-                    <span style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>{newFactureData.montantHT} MAD</span>
+              {/* Totals + Montant en lettres */}
+              <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                {/* Montant en lettres */}
+                <div style={{ flex: 1, minWidth: '280px', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '16px', backgroundColor: '#f8fafc' }}>
+                  <div style={{ fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '8px' }}>Arrêter la présente facture à la somme de :</div>
+                  <div style={{ fontSize: '13px', fontWeight: '600', color: '#0f172a', fontStyle: 'italic', lineHeight: '1.5' }}>
+                    {newFactureData.montant_lettres || '—'}
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '13px', fontWeight: '600', color: '#475569' }}>TVA:</span>
-                    <span style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>{newFactureData.montantTVA} MAD</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: '2px solid #e2e8f0' }}>
-                    <span style={{ fontSize: '15px', fontWeight: '800', color: '#0f766e' }}>Total TTC:</span>
-                    <span style={{ fontSize: '18px', fontWeight: '800', color: '#0f766e' }}>{newFactureData.montantTTC} MAD</span>
+                </div>
+                {/* Calculs */}
+                <div style={{ width: '320px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {[
+                    { label: 'Total HT :', value: newFactureData.montantHT, bold: false },
+                    { label: 'TVA 9 % :', value: newFactureData.tva_9, bold: false },
+                    { label: 'TVA 10 % :', value: newFactureData.tva_10, bold: false },
+                    { label: 'TVA 20 % :', value: newFactureData.tva_20, bold: false },
+                  ].map(row => (
+                    <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0' }}>
+                      <span style={{ fontSize: '13px', fontWeight: '600', color: '#475569' }}>{row.label}</span>
+                      <span style={{ fontSize: '13px', fontWeight: '700', color: '#0f172a' }}>{parseFloat(row.value || 0).toFixed(2)} MAD</span>
+                    </div>
+                  ))}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: '2px solid #0f766e' }}>
+                    <span style={{ fontSize: '15px', fontWeight: '800', color: '#0f766e' }}>Total TTC :</span>
+                    <span style={{ fontSize: '18px', fontWeight: '800', color: '#0f766e' }}>{parseFloat(newFactureData.montantTTC || 0).toFixed(2)} MAD</span>
                   </div>
                 </div>
               </div>

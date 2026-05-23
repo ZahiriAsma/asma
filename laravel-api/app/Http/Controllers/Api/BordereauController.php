@@ -398,11 +398,49 @@ class BordereauController extends Controller
             }
 
             $startIndex = $lastHeaderRowIndex !== null ? $lastHeaderRowIndex + 1 : 0;
+            $endIndex = count($rows);
+
+            // --- NOUVELLE LOGIQUE : Détecter la fin du tableau principal ---
+            $emptyConsecutive = 0;
+            for ($i = $startIndex; $i <= count($rows); $i++) {
+                if (!isset($rows[$i])) continue;
+                
+                $row = $rows[$i];
+                $priceNumber = isset($mapping['price_number']) ? trim((string)($row[$mapping['price_number']] ?? '')) : null;
+                $description = isset($mapping['service_description']) ? trim((string)($row[$mapping['service_description']] ?? '')) : null;
+                
+                $rowValues = array_values($row);
+                $rowStr = mb_strtolower(implode(' ', array_filter($rowValues, fn($v) => $v !== null && $v !== '')));
+
+                // 1. Détection par mots-clés typiques du bas de document
+                if (preg_match('/(arrêté le présent|arrete le present|total.*(ht|tva|ttc|dh|dhs|dirham|général|general|lettre)|montant.*(ht|ttc|tva|dh|dhs|dirham)|signature|fait à|fait a )/', $rowStr)) {
+                    $endIndex = $i;
+                    break;
+                }
+
+                // 2. Détection par lignes vides consécutives (si le tableau est séparé du bas par beaucoup de vide)
+                if (empty($priceNumber) && empty($description)) {
+                    $emptyConsecutive++;
+                    if ($emptyConsecutive >= 4) {
+                        $endIndex = $i - 3; // La fin du tableau est avant les lignes vides
+                        break;
+                    }
+                } else {
+                    $emptyConsecutive = 0;
+                }
+            }
+
             $rowNumber = 0;
 
             foreach ($rows as $index => $row) {
+                // Ignorer l'en-tête et tout ce qui est avant
                 if ($index < $startIndex) {
                     continue;
+                }
+
+                // Arrêter la boucle des produits dès qu'on atteint la fin du tableau
+                if ($index >= $endIndex) {
+                    break;
                 }
 
                 $priceNumber = isset($mapping['price_number']) ? trim((string)($row[$mapping['price_number']] ?? '')) : null;
