@@ -48,4 +48,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/technical-sheets/{id}', [\App\Http\Controllers\TechnicalSheetController::class, 'destroy']);
     Route::get('/technical-sheets/ingredients', [\App\Http\Controllers\TechnicalSheetController::class, 'allIngredients']);
     Route::get('/technical-sheets/bordereau-headers', [\App\Http\Controllers\TechnicalSheetController::class, 'bordereauHeaders']);
+
+    // Stock Routes
+    Route::get('/stocks', [\App\Http\Controllers\Api\StockController::class, 'index']);
+    Route::get('/stocks/export', [\App\Http\Controllers\Api\StockController::class, 'export']);
 });

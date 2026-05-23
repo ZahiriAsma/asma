@@ -10,6 +10,7 @@ import FournisseursContent from './FournisseursContent';
 import MenusContent from './MenusContent';
 import ParametresContent from './ParametresContent';
 import BordereauContent from './BordereauContent';
+import StockContent from './StockContent';
 import { useDashboard } from '../context/DashboardContext';
 
 const DashboardPage = () => {
@@ -853,25 +854,7 @@ const DashboardPage = () => {
               </div>
             </div>
           )}
-          {activeTab === 'stock' && (
-            <div style={{ padding: '32px', textAlign: 'center', maxWidth: '600px', margin: '80px auto', fontFamily: isRtl ? "'Noto Sans Arabic', 'Segoe UI', sans-serif" : "'Inter', sans-serif" }}>
-              <div style={{ width: '80px', height: '80px', borderRadius: '50%', backgroundColor: 'rgba(15, 118, 110, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
-                <Package size={40} color="#0f766e" />
-              </div>
-              <h2 style={{ fontSize: '20px', fontWeight: '700', color: clr.text, marginBottom: '8px' }}>{nt.stockManagement}</h2>
-              <p style={{ color: clr.textMuted, fontSize: '14px', lineHeight: '1.6', marginBottom: '24px' }}>
-                {nt.stockManagementDesc}
-              </p>
-              <button 
-                onClick={() => setActiveTab('menus')}
-                style={{ padding: '10px 20px', backgroundColor: '#0f766e', color: 'white', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', transition: 'background-color 0.2s' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0d5c56'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0f766e'}
-              >
-                {nt.planMenus}
-              </button>
-            </div>
-          )}
+          {activeTab === 'stock' && <StockContent />}
           {activeTab === 'rapports' && (
             <div style={{ padding: '32px', textAlign: 'center', maxWidth: '600px', margin: '80px auto', fontFamily: isRtl ? "'Noto Sans Arabic', 'Segoe UI', sans-serif" : "'Inter', sans-serif" }}>
               <div style={{ width: '80px', height: '80px', borderRadius: '50%', backgroundColor: 'rgba(59, 130, 246, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>

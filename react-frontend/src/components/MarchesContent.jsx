@@ -199,7 +199,7 @@ const MarchesContent = () => {
     numero_facture: '',
     date_facture: new Date().toISOString().split('T')[0],
     client: 'OFPPT / ISTA Ouarzazate',
-    reference_bl: '',
+    ice_client: '',
     reference_bc: '',
     site_livraison: 'ISTA Ouarzazate',
     conditions_generales: 'Paiement à réception de la facture.',
@@ -1064,7 +1064,7 @@ const MarchesContent = () => {
         numero_facture: newFactureData.numero_facture,
         date_facture: newFactureData.date_facture,
         client: newFactureData.client,
-        reference_bl: newFactureData.reference_bl,
+        ice_client: newFactureData.ice_client,
         reference_bc: newFactureData.reference_bc,
         site_livraison: newFactureData.site_livraison,
         montant_lettres: newFactureData.montant_lettres,
@@ -1691,7 +1691,7 @@ const MarchesContent = () => {
                   date_facture: new Date().toISOString().split('T')[0],
                   client: 'OFPPT / ISTA Ouarzazate',
                   site_livraison: 'ISTA Ouarzazate',
-                  reference_bl: '',
+                  ice_client: '',
                   reference_bc: '',
                   conditions_generales: 'Paiement à réception de la facture.',
                   conditions_particulieres: '',
@@ -1745,7 +1745,7 @@ const MarchesContent = () => {
                         <td style={{ padding: '14px 8px', fontSize: '12px', color: '#64748b' }}>{idx + 1}</td>
                         <td style={{ padding: '14px 8px', fontSize: '13px', fontWeight: '600', color: '#0f172a' }}>
                           <div>{facture.client || 'N/A'}</div>
-                          <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 'normal', marginTop: '2px' }}>Réf BL: {facture.reference_bl || '—'}</div>
+                          <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 'normal', marginTop: '2px' }}>ICE Client: {facture.ice_client || '—'}</div>
                         </td>
                         <td style={{ padding: '14px 8px', fontSize: '12px', fontWeight: '700', color: '#0f766e' }}>
                           <span style={{ backgroundColor: '#ecfdf5', color: '#0f766e', padding: '4px 8px', borderRadius: '6px', fontSize: '11px' }}>
@@ -1800,7 +1800,7 @@ const MarchesContent = () => {
                                 date_facture: facture.date_facture ? facture.date_facture.split('T')[0] : '',
                                 client: facture.client || 'OFPPT / ISTA Ouarzazate',
                                 site_livraison: facture.site_livraison || '',
-                                reference_bl: facture.reference_bl || '',
+                                ice_client: facture.ice_client || '',
                                 reference_bc: facture.reference_bc || '',
                                 conditions_generales: facture.conditions_generales,
                                 conditions_particulieres: facture.conditions_particulieres,
@@ -3851,11 +3851,11 @@ const MarchesContent = () => {
                   </select>
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Réf. Bon de Livraison</label>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>ICE Client</label>
                   <input
                     type="text"
-                    value={newFactureData.reference_bl}
-                    onChange={(e) => setNewFactureData({ ...newFactureData, reference_bl: e.target.value })}
+                    value={newFactureData.ice_client}
+                    onChange={(e) => setNewFactureData({ ...newFactureData, ice_client: e.target.value })}
                     style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155', boxSizing: 'border-box' }}
                   />
                 </div>
@@ -3867,60 +3867,7 @@ const MarchesContent = () => {
                   <label style={{ display: 'block', fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>
                     Articles de la Facture ({newFactureData.items?.length || 0})
                   </label>
-                  
-                  {/* Quick Add Product */}
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', backgroundColor: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                     <div style={{ position: 'relative' }}>
-                       <input
-                         type="text"
-                         placeholder="Chercher produit..."
-                         value={productSearch}
-                         onChange={(e) => {
-                           setProductSearch(e.target.value);
-                           setShowSuggestions(true);
-                           if (e.target.value === '') setSelectedBordereauItem(null);
-                         }}
-                         style={{ width: '180px', padding: '6px 10px', fontSize: '12px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
-                       />
-                       {showSuggestions && productSearch && (
-                         <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '6px', maxHeight: '150px', overflowY: 'auto', zIndex: 10, marginTop: '4px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
-                           {filteredSuggestions.length > 0 ? (
-                             filteredSuggestions.map((item, idx) => (
-                               <div
-                                 key={idx}
-                                 onClick={() => {
-                                   setSelectedBordereauItem(item);
-                                   setProductSearch(item.service_description || '');
-                                   setTempPrice(item.price || '');
-                                   setShowSuggestions(false);
-                                 }}
-                                 style={{ padding: '8px 10px', fontSize: '11px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9' }}
-                               >
-                                 <div style={{ fontWeight: '600', color: '#0f172a' }}>N° {item.price_number} - {item.service_description}</div>
-                                 <div style={{ color: '#64748b' }}>Prix ref: {item.price} MAD</div>
-                               </div>
-                             ))
-                           ) : (
-                             <div style={{ padding: '8px 10px', fontSize: '11px', color: '#94a3b8' }}>Aucun résultat</div>
-                           )}
-                         </div>
-                       )}
-                     </div>
-                     <input
-                       type="text"
-                       placeholder="N°"
-                       value={selectedBordereauItem ? selectedBordereauItem.price_number : ''}
-                       readOnly
-                       title="Numéro d'article (Sélectionné automatiquement)"
-                       style={{ width: '50px', padding: '6px', fontSize: '12px', borderRadius: '4px', border: '1px solid #cbd5e1', backgroundColor: '#f1f5f9', color: '#64748b', textAlign: 'center', cursor: 'not-allowed' }}
-                     />
-                     <input type="number" min="1" placeholder="Qté" value={tempQty} onChange={(e) => setTempQty(e.target.value)} style={{ width: '60px', padding: '6px', fontSize: '12px', borderRadius: '4px', border: '1px solid #cbd5e1', textAlign: 'center' }} />
-                     <input type="number" step="0.01" placeholder="P.U HT" value={tempPrice} onChange={(e) => setTempPrice(e.target.value)} style={{ width: '80px', padding: '6px', fontSize: '12px', borderRadius: '4px', border: '1px solid #cbd5e1', textAlign: 'center' }} />
-                     <select value={tempVat} onChange={(e) => setTempVat(e.target.value)} style={{ width: '70px', padding: '6px', fontSize: '12px', borderRadius: '4px', border: '1px solid #cbd5e1' }}>
-                       <option value={0}>0%</option><option value={9}>9%</option><option value={10}>10%</option><option value={20}>20%</option>
-                     </select>
-                     <button type="button" onClick={handleAddProductToFacture} style={{ padding: '6px 12px', backgroundColor: '#0f766e', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>Ajouter</button>
-                  </div>
+
                 </div>
 
                 <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
@@ -4064,8 +4011,8 @@ const MarchesContent = () => {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px', backgroundColor: '#f8fafc', padding: '16px', borderRadius: '12px' }}>
               <div>
-                <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase', marginBottom: '2px' }}>Réf. Bon de Livraison</div>
-                <div style={{ fontSize: '13px', fontWeight: '600', color: '#334155' }}>{selectedFactureForView.reference_bl || 'Non spécifié'}</div>
+                <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase', marginBottom: '2px' }}>ICE Client</div>
+                <div style={{ fontSize: '13px', fontWeight: '600', color: '#334155' }}>{selectedFactureForView.ice_client || 'Non spécifié'}</div>
               </div>
               <div>
                 <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase', marginBottom: '2px' }}>Statut</div>

@@ -53,6 +53,8 @@ class BonLivraisonController extends Controller
         }
 
         $bonLivraison = BonLivraison::create($validated);
+        $this->processStock($bonLivraison);
+
         return response()->json($bonLivraison->load('fournisseurModel'), 201);
     }
 
@@ -98,6 +100,8 @@ class BonLivraisonController extends Controller
         }
 
         $bonLivraison->update($validated);
+        $this->processStock($bonLivraison);
+
         return response()->json($bonLivraison->load('fournisseurModel'));
     }
 
@@ -320,5 +324,31 @@ class BonLivraisonController extends Controller
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             'Cache-Control' => 'max-age=0',
         ]);
+    }
+
+    protected function processStock(BonLivraison $bl)
+    {
+        if ($bl->statut === 'Validé' && !$bl->is_stock_processed) {
+            $items = $bl->items ?? [];
+            foreach ($items as $item) {
+                $designation = $item['service_description'] ?? ($item['designation'] ?? ($item['label'] ?? ''));
+                $unite = $item['unit_of_measure'] ?? ($item['unit'] ?? 'Unité');
+                $qty = (float)($item['qty'] ?? ($item['quantity'] ?? 0));
+
+                if (!empty($designation)) {
+                    $stock = \App\Models\Stock::firstOrCreate(
+                        ['designation' => $designation],
+                        ['unite' => $unite, 'quantite_initiale' => 0]
+                    );
+
+                    $stock->quantite_initiale += $qty;
+                    $stock->last_entry_date = $bl->date_bl;
+                    $stock->save();
+                }
+            }
+
+            $bl->is_stock_processed = true;
+            $bl->save();
+        }
     }
 }
