@@ -235,6 +235,11 @@ const MarchesContent = () => {
     conformites: []
   });
   const [editingConformite, setEditingConformite] = useState(null);
+
+  // --- View modal states ---
+  const [selectedAttachmentForView, setSelectedAttachmentForView] = useState(null);
+  const [selectedPvForView, setSelectedPvForView] = useState(null);
+  const [selectedConformiteForView, setSelectedConformiteForView] = useState(null);
   const normalizeBlItems = (items) => {
     let itemsArray = [];
     if (items) {
@@ -1250,6 +1255,7 @@ const MarchesContent = () => {
       // Build conformite lines from BL items
       const conformites = blItems.map((item, index) => ({
         numero_ligne: index + 1,
+        price_number: item.price_number || null,
         designation: item.service_description || item.designation || item.label || item.name || 'Produit',
         unite: item.unit_of_measure || item.unite || item.unit || 'U',
         quantite: parseFloat(item.qty || item.quantity || item.qte || 0),
@@ -1614,7 +1620,8 @@ const MarchesContent = () => {
                             title="Voir"
                             style={{
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #cbd5e1',
+                              width: '28px', height: '28px', borderRadius: '6px',
+                              border: '1px solid #e2e8f0',
                               backgroundColor: '#f8fafc', color: '#64748b', cursor: 'pointer', transition: 'all 0.2s'
                             }}
                             onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e2e8f0'; }}
@@ -1647,11 +1654,12 @@ const MarchesContent = () => {
                             title="Modifier"
                             style={{
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #cbd5e1',
-                              backgroundColor: '#f8fafc', color: '#64748b', cursor: 'pointer', transition: 'all 0.2s'
+                              width: '28px', height: '28px', borderRadius: '6px',
+                              border: '1px solid rgba(59,130,246,0.2)',
+                              backgroundColor: '#eff6ff', color: '#3b82f6', cursor: 'pointer', transition: 'all 0.2s'
                             }}
-                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e2e8f0'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#f8fafc'; }}
+                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#dbeafe'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#eff6ff'; }}
                           >
                             <Edit2 size={14} />
                           </button>
@@ -1660,11 +1668,12 @@ const MarchesContent = () => {
                             title="Supprimer"
                             style={{
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #cbd5e1',
-                              backgroundColor: '#f8fafc', color: '#64748b', cursor: 'pointer', transition: 'all 0.2s'
+                              width: '28px', height: '28px', borderRadius: '6px',
+                              border: '1px solid rgba(239,68,68,0.2)',
+                              backgroundColor: '#fef2f2', color: '#ef4444', cursor: 'pointer', transition: 'all 0.2s'
                             }}
-                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#fee2e2'; e.currentTarget.style.color = '#ef4444'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#f8fafc'; e.currentTarget.style.color = '#64748b'; }}
+                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#fee2e2'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#fef2f2'; }}
                           >
                             <Trash2 size={14} />
                           </button>
@@ -1673,7 +1682,8 @@ const MarchesContent = () => {
                             title="Télécharger Excel"
                             style={{
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              width: '28px', height: '28px', borderRadius: '6px', border: '1px solid rgba(16,185,129,0.2)',
+                              width: '28px', height: '28px', borderRadius: '6px',
+                              border: '1px solid rgba(16,185,129,0.2)',
                               backgroundColor: '#f0fdf4', color: '#10b981', cursor: 'pointer', transition: 'all 0.2s'
                             }}
                             onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#dcfce7'; }}
@@ -1791,6 +1801,15 @@ const MarchesContent = () => {
                           {group.budget}
                         </td>
                         <td style={{ padding: '14px 8px', display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
+                          <button
+                            onClick={() => setSelectedAttachmentForView(group)}
+                            title="Voir"
+                            style={{
+                              width: '32px', height: '32px', borderRadius: '8px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', color: '#64748b', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s'
+                            }}
+                          >
+                            <Eye size={15} />
+                          </button>
                           <button
                             onClick={() => {
                               setEditingAttachmentGroup(group);
@@ -2175,6 +2194,15 @@ const MarchesContent = () => {
                         </td>
                         <td style={{ padding: '14px 8px', display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
                           <button
+                            onClick={() => setSelectedPvForView(pv)}
+                            title="Voir"
+                            style={{
+                              width: '32px', height: '32px', borderRadius: '8px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', color: '#64748b', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s'
+                            }}
+                          >
+                            <Eye size={15} />
+                          </button>
+                          <button
                             onClick={() => {
                               setEditingPv(pv);
                               setNewPvData({
@@ -2361,6 +2389,15 @@ const MarchesContent = () => {
                           {pv.pv_conformites ? pv.pv_conformites.length : 0} articles
                         </td>
                         <td style={{ padding: '14px 8px', display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
+                          <button
+                            onClick={() => setSelectedConformiteForView(pv)}
+                            title="Voir"
+                            style={{
+                              width: '32px', height: '32px', borderRadius: '8px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', color: '#64748b', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s'
+                            }}
+                          >
+                            <Eye size={15} />
+                          </button>
                           <button
                             onClick={() => {
                               setEditingConformite(pv);
@@ -4909,9 +4946,44 @@ const MarchesContent = () => {
                       {newConformiteData.conformites.map((item, index) => (
                         <tr key={index} style={{ borderBottom: '1px solid #f1f5f9' }}>
                           <td style={{ padding: '8px 12px', color: '#0f766e', fontWeight: '600' }}>{item.numero_ligne}</td>
-                          <td style={{ padding: '8px 12px', color: '#0f172a', fontWeight: '500' }}>{item.designation}</td>
-                          <td style={{ padding: '8px 12px', textAlign: 'center' }}>{item.unite}</td>
-                          <td style={{ padding: '8px 12px', textAlign: 'center', fontWeight: '600' }}>{item.quantite}</td>
+                          <td style={{ padding: '8px 12px', color: '#0f172a', fontWeight: '500' }}>
+                            {item.price_number && (
+                              <span style={{ backgroundColor: '#ecfdf5', color: '#0f766e', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: '700', marginRight: '8px' }}>
+                                N° {item.price_number}
+                              </span>
+                            )}
+                            {item.designation}
+                          </td>
+                          <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                            <span style={{
+                              display: 'inline-block',
+                              backgroundColor: '#eff6ff',
+                              color: '#2563eb',
+                              border: '1px solid #bfdbfe',
+                              padding: '3px 10px',
+                              borderRadius: '20px',
+                              fontSize: '11px',
+                              fontWeight: '700',
+                              letterSpacing: '0.03em'
+                            }}>
+                              {item.unite}
+                            </span>
+                          </td>
+                          <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                            <span style={{
+                              display: 'inline-block',
+                              backgroundColor: '#fef3c7',
+                              color: '#d97706',
+                              border: '1px solid #fde68a',
+                              padding: '3px 10px',
+                              borderRadius: '20px',
+                              fontSize: '11px',
+                              fontWeight: '700',
+                              letterSpacing: '0.03em'
+                            }}>
+                              {item.quantite}
+                            </span>
+                          </td>
                           <td style={{ padding: '8px 12px' }}>
                             <select 
                               value={item.conformite} 
@@ -4950,6 +5022,194 @@ const MarchesContent = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── VIEW MODAL: ATTACHEMENT ── */}
+      {selectedAttachmentForView && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
+          <div style={{ backgroundColor: 'white', borderRadius: '16px', width: '100%', maxWidth: '700px', padding: '32px', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.15)', maxHeight: '90vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '16px' }}>
+              <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Eye size={20} color="#0f766e" /> Détail Attachement
+              </h2>
+              <button onClick={() => setSelectedAttachmentForView(null)} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#64748b' }}>&times;</button>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              {[
+                { label: 'N° Attachement', value: `${selectedAttachmentForView.numero_attachment}/${selectedAttachmentForView.exercice}` },
+                { label: 'Budget', value: selectedAttachmentForView.budget || '—' },
+                { label: 'Rubrique', value: selectedAttachmentForView.rubrique || '—' },
+                { label: 'Lieu de livraison', value: selectedAttachmentForView.lieu_livraison || '—' },
+                { label: 'Référence marché', value: selectedAttachmentForView.reference_marche || '—' },
+                { label: 'Exercice', value: selectedAttachmentForView.exercice || '—' },
+              ].map((field, i) => (
+                <div key={i} style={{ backgroundColor: '#f8fafc', borderRadius: '10px', padding: '14px 16px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>{field.label}</div>
+                  <div style={{ fontSize: '14px', fontWeight: '600', color: '#0f172a' }}>{field.value}</div>
+                </div>
+              ))}
+            </div>
+            {selectedAttachmentForView.items && selectedAttachmentForView.items.length > 0 && (
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: '700', color: '#475569', marginBottom: '10px' }}>Articles ({selectedAttachmentForView.items.length})</div>
+                <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                        <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700', color: '#64748b' }}>Désignation</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: '700', color: '#64748b' }}>Unité</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: '700', color: '#64748b' }}>Quantité</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(typeof selectedAttachmentForView.items === 'string' ? JSON.parse(selectedAttachmentForView.items) : selectedAttachmentForView.items).map((item, i) => (
+                        <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                          <td style={{ padding: '8px 12px', color: '#334155', fontWeight: '500' }}>{item.designation || item.service_description || '—'}</td>
+                          <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                            <span style={{ backgroundColor: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', padding: '2px 8px', borderRadius: '20px', fontSize: '11px', fontWeight: '700' }}>{item.unite || '—'}</span>
+                          </td>
+                          <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                            <span style={{ backgroundColor: '#fef3c7', color: '#d97706', border: '1px solid #fde68a', padding: '2px 8px', borderRadius: '20px', fontSize: '11px', fontWeight: '700' }}>{item.quantite || item.quantity || '0'}</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
+              <button onClick={() => setSelectedAttachmentForView(null)} style={{ padding: '10px 28px', borderRadius: '8px', border: 'none', backgroundColor: '#0f766e', color: 'white', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}>Fermer</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── VIEW MODAL: PV DE RÉCEPTION ── */}
+      {selectedPvForView && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
+          <div style={{ backgroundColor: 'white', borderRadius: '16px', width: '100%', maxWidth: '640px', padding: '32px', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.15)', maxHeight: '90vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '16px' }}>
+              <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Eye size={20} color="#0f766e" /> Détail PV de Réception
+              </h2>
+              <button onClick={() => setSelectedPvForView(null)} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#64748b' }}>&times;</button>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              {[
+                { label: 'BL Associé', value: providerBls.find(b => b.id == selectedPvForView.bon_livraison_id)?.numeroBL || 'Inconnu' },
+                { label: 'Date de réception', value: new Date(selectedPvForView.date_reception).toLocaleDateString('fr-FR') },
+                { label: 'Marché', value: selectedMarche?.titulaire || '—' },
+                { label: 'Membres commission', value: `${selectedPvForView.commissions?.length || 0} membres` },
+              ].map((field, i) => (
+                <div key={i} style={{ backgroundColor: '#f8fafc', borderRadius: '10px', padding: '14px 16px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>{field.label}</div>
+                  <div style={{ fontSize: '14px', fontWeight: '600', color: '#0f172a' }}>{field.value}</div>
+                </div>
+              ))}
+            </div>
+            {selectedPvForView.commissions && selectedPvForView.commissions.length > 0 && (
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: '700', color: '#475569', marginBottom: '10px' }}>Membres de la commission</div>
+                <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                        <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700', color: '#64748b' }}>Nom & Prénom</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700', color: '#64748b' }}>Fonction</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: '700', color: '#64748b' }}>Rôle</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedPvForView.commissions.map((m, i) => (
+                        <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                          <td style={{ padding: '8px 12px', fontWeight: '600', color: '#0f172a' }}>{m.nom_prenom}</td>
+                          <td style={{ padding: '8px 12px', color: '#475569' }}>{m.fonction}</td>
+                          <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                            <span style={{ backgroundColor: m.role === 'President' ? '#ecfdf5' : m.role === 'Rapporteur' ? '#eff6ff' : '#f8fafc', color: m.role === 'President' ? '#0f766e' : m.role === 'Rapporteur' ? '#2563eb' : '#64748b', padding: '2px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', border: '1px solid', borderColor: m.role === 'President' ? '#bbf7d0' : m.role === 'Rapporteur' ? '#bfdbfe' : '#e2e8f0' }}>{m.role}</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
+              <button onClick={() => setSelectedPvForView(null)} style={{ padding: '10px 28px', borderRadius: '8px', border: 'none', backgroundColor: '#0f766e', color: 'white', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}>Fermer</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── VIEW MODAL: PV DE CONFORMITÉ ── */}
+      {selectedConformiteForView && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
+          <div style={{ backgroundColor: 'white', borderRadius: '16px', width: '100%', maxWidth: '800px', padding: '32px', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.15)', maxHeight: '90vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '16px' }}>
+              <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Eye size={20} color="#0f766e" /> Détail PV de Conformité
+              </h2>
+              <button onClick={() => setSelectedConformiteForView(null)} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#64748b' }}>&times;</button>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              {[
+                { label: 'BL Associé', value: providerBls.find(b => b.id == selectedConformiteForView.bon_livraison_id)?.numeroBL || 'Inconnu' },
+                { label: 'Date de réception', value: new Date(selectedConformiteForView.date_reception).toLocaleDateString('fr-FR') },
+                { label: 'Total articles', value: `${selectedConformiteForView.pv_conformites?.length || 0} articles` },
+                { label: 'Conformes', value: `${(selectedConformiteForView.pv_conformites || []).filter(c => c.conformite === 'Conforme').length} / ${selectedConformiteForView.pv_conformites?.length || 0}` },
+              ].map((field, i) => (
+                <div key={i} style={{ backgroundColor: '#f8fafc', borderRadius: '10px', padding: '14px 16px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>{field.label}</div>
+                  <div style={{ fontSize: '14px', fontWeight: '600', color: '#0f172a' }}>{field.value}</div>
+                </div>
+              ))}
+            </div>
+            {selectedConformiteForView.pv_conformites && selectedConformiteForView.pv_conformites.length > 0 && (
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: '700', color: '#475569', marginBottom: '10px' }}>Articles vérifiés</div>
+                <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                        <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: '700', color: '#64748b', width: '40px' }}>N°</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700', color: '#64748b' }}>Désignation</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: '700', color: '#64748b', width: '80px' }}>Unité</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: '700', color: '#64748b', width: '80px' }}>Quantité</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: '700', color: '#64748b', width: '130px' }}>Conformité</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700', color: '#64748b' }}>Observations</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedConformiteForView.pv_conformites.map((item, i) => (
+                        <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                          <td style={{ padding: '8px 12px', textAlign: 'center', color: '#0f766e', fontWeight: '700' }}>{item.numero_ligne}</td>
+                          <td style={{ padding: '8px 12px', color: '#0f172a', fontWeight: '500' }}>
+                            {item.price_number && <span style={{ backgroundColor: '#ecfdf5', color: '#0f766e', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: '700', marginRight: '6px' }}>N° {item.price_number}</span>}
+                            {item.designation}
+                          </td>
+                          <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                            <span style={{ backgroundColor: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', padding: '2px 8px', borderRadius: '20px', fontSize: '11px', fontWeight: '700' }}>{item.unite}</span>
+                          </td>
+                          <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                            <span style={{ backgroundColor: '#fef3c7', color: '#d97706', border: '1px solid #fde68a', padding: '2px 8px', borderRadius: '20px', fontSize: '11px', fontWeight: '700' }}>{item.quantite}</span>
+                          </td>
+                          <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                            <span style={{ backgroundColor: item.conformite === 'Conforme' ? '#ecfdf5' : '#fef2f2', color: item.conformite === 'Conforme' ? '#0f766e' : '#ef4444', border: `1px solid ${item.conformite === 'Conforme' ? '#bbf7d0' : '#fca5a5'}`, padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700' }}>{item.conformite}</span>
+                          </td>
+                          <td style={{ padding: '8px 12px', color: '#64748b', fontSize: '12px' }}>{item.observation || '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
+              <button onClick={() => setSelectedConformiteForView(null)} style={{ padding: '10px 28px', borderRadius: '8px', border: 'none', backgroundColor: '#0f766e', color: 'white', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}>Fermer</button>
+            </div>
           </div>
         </div>
       )}

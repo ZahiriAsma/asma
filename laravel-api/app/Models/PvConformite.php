@@ -12,6 +12,7 @@ class PvConformite extends Model
     protected $fillable = [
         'pv_reception_id',
         'numero_ligne',
+        'price_number',
         'designation',
         'unite',
         'quantite',
