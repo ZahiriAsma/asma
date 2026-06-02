@@ -3507,10 +3507,10 @@ const MarchesContent = () => {
                       <div style={{ display: 'flex', flexDirection: 'column' }}>
                         {providerBcs.length === 0 ? (
                           <div style={{ padding: '12px', fontSize: '13px', color: '#64748b', textAlign: 'center' }}>
-                            Aucun Bon de Commande disponible pour ce fournisseur.
+                            Aucun Bon de Commande disponible pour ce marché.
                           </div>
                         ) : (
-                          bcs.filter(bc => bc.fournisseur_id?.toString() === selectedMarche?.id_fournisseur?.toString()).map(bc => {
+                          providerBcs.map(bc => {
                             const isSelected = newBlData.referenceBCs.includes(bc.numeroBC);
                             return (
                               <div
@@ -3797,7 +3797,7 @@ const MarchesContent = () => {
             <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '24px' }}>
               <thead>
                 <tr style={{ borderBottom: '2px solid #cbd5e1', textAlign: 'left' }}>
-                  <th style={{ padding: '8px', fontSize: '11px', fontWeight: '700', color: '#64748b', width: '40px' }}>#</th>
+                  <th style={{ padding: '8px', fontSize: '11px', fontWeight: '700', color: '#64748b', width: '60px' }}>N° PRIX</th>
                   <th style={{ padding: '8px', fontSize: '11px', fontWeight: '700', color: '#64748b' }}>DÉSIGNATION</th>
                   <th style={{ padding: '8px', fontSize: '11px', fontWeight: '700', color: '#64748b', width: '80px' }}>UNITÉ</th>
                   <th style={{ padding: '8px', fontSize: '11px', fontWeight: '700', color: '#64748b', width: '70px', textAlign: 'center' }}>QTÉ</th>
@@ -3812,7 +3812,7 @@ const MarchesContent = () => {
                   const totalLineHt = qty * unitPrice;
                   return (
                     <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '10px 8px', fontSize: '12px', color: '#64748b' }}>{idx + 1}</td>
+                      <td style={{ padding: '10px 8px', fontSize: '12px', fontWeight: '700', color: '#0f766e' }}>{item.price_number || (idx + 1)}</td>
                       <td style={{ padding: '10px 8px', fontSize: '13px', fontWeight: '600', color: '#0f172a' }}>{item.service_description || item.designation}</td>
                       <td style={{ padding: '10px 8px', fontSize: '12px', color: '#475569' }}>{item.unit_of_measure || '—'}</td>
                       <td style={{ padding: '10px 8px', fontSize: '13px', color: '#0f172a', textAlign: 'center', fontWeight: '600' }}>{qty}</td>
@@ -4073,9 +4073,9 @@ const MarchesContent = () => {
             </div>
 
             <div style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px', marginBottom: '32px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Bon de Livraison *</label>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '8px' }}>Bon de Livraison *</label>
                   <select
                     value={newAttachmentData.bon_livraison_id}
                     onChange={(e) => {
@@ -4106,7 +4106,7 @@ const MarchesContent = () => {
                   </select>
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>N° Attachement *</label>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '8px' }}>N° Attachement *</label>
                   <input
                     type="number"
                     value={newAttachmentData.numero_attachment}
@@ -4115,7 +4115,7 @@ const MarchesContent = () => {
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Budget</label>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '8px' }}>Budget</label>
                   <input
                     type="text"
                     value={newAttachmentData.budget}
@@ -4124,7 +4124,7 @@ const MarchesContent = () => {
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Exercice</label>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '8px' }}>Exercice</label>
                   <input
                     type="number"
                     value={newAttachmentData.exercice}
@@ -4133,7 +4133,7 @@ const MarchesContent = () => {
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Rubrique</label>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '8px' }}>Rubrique</label>
                   <input
                     type="text"
                     value={newAttachmentData.rubrique}
@@ -4142,7 +4142,7 @@ const MarchesContent = () => {
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Lieu Livraison</label>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '8px' }}>Lieu Livraison</label>
                   <input
                     type="text"
                     value={newAttachmentData.lieu_livraison}
@@ -4171,40 +4171,40 @@ const MarchesContent = () => {
                   <tbody>
                     {newAttachmentData.items.map((item, idx) => (
                       <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                        <td style={{ padding: '8px' }}>
+                        <td style={{ padding: '12px' }}>
                           <input type="number" value={item.numero_article} onChange={(e) => {
                             const newItems = [...newAttachmentData.items];
                             newItems[idx].numero_article = e.target.value;
                             setNewAttachmentData({ ...newAttachmentData, items: newItems });
-                          }} style={{ width: '100%', padding: '6px', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
+                          }} style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
                         </td>
-                        <td style={{ padding: '8px' }}>
+                        <td style={{ padding: '12px' }}>
                           <input type="text" value={item.designation} onChange={(e) => {
                             const newItems = [...newAttachmentData.items];
                             newItems[idx].designation = e.target.value;
                             setNewAttachmentData({ ...newAttachmentData, items: newItems });
-                          }} style={{ width: '100%', padding: '6px', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
+                          }} style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
                         </td>
-                        <td style={{ padding: '8px' }}>
+                        <td style={{ padding: '12px' }}>
                           <input type="text" value={item.unite} onChange={(e) => {
                             const newItems = [...newAttachmentData.items];
                             newItems[idx].unite = e.target.value;
                             setNewAttachmentData({ ...newAttachmentData, items: newItems });
-                          }} style={{ width: '100%', padding: '6px', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
+                          }} style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
                         </td>
-                        <td style={{ padding: '8px' }}>
+                        <td style={{ padding: '12px' }}>
                           <input type="number" value={item.quantite} onChange={(e) => {
                             const newItems = [...newAttachmentData.items];
                             newItems[idx].quantite = e.target.value;
                             setNewAttachmentData({ ...newAttachmentData, items: newItems });
-                          }} style={{ width: '100%', padding: '6px', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
+                          }} style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
                         </td>
-                        <td style={{ padding: '8px' }}>
+                        <td style={{ padding: '12px' }}>
                           <input type="number" value={item.taux_tva} onChange={(e) => {
                             const newItems = [...newAttachmentData.items];
                             newItems[idx].taux_tva = e.target.value;
                             setNewAttachmentData({ ...newAttachmentData, items: newItems });
-                          }} style={{ width: '100%', padding: '6px', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
+                          }} style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
                         </td>
                         <td style={{ padding: '8px', textAlign: 'center' }}>
                           <button onClick={() => {
