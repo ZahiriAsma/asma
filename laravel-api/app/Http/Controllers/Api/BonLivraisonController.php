@@ -328,27 +328,7 @@ class BonLivraisonController extends Controller
 
     protected function processStock(BonLivraison $bl)
     {
-        if ($bl->statut === 'Validé' && !$bl->is_stock_processed) {
-            $items = $bl->items ?? [];
-            foreach ($items as $item) {
-                $designation = $item['service_description'] ?? ($item['designation'] ?? ($item['label'] ?? ''));
-                $unite = $item['unit_of_measure'] ?? ($item['unit'] ?? 'Unité');
-                $qty = (float)($item['qty'] ?? ($item['quantity'] ?? 0));
-
-                if (!empty($designation)) {
-                    $stock = \App\Models\Stock::firstOrCreate(
-                        ['designation' => $designation],
-                        ['unite' => $unite, 'quantite_initiale' => 0]
-                    );
-
-                    $stock->quantite_initiale += $qty;
-                    $stock->last_entry_date = $bl->date_bl;
-                    $stock->save();
-                }
-            }
-
-            $bl->is_stock_processed = true;
-            $bl->save();
-        }
+        // Stock is now dynamically computed in StockController
+        // to guarantee perfect real-time synchronization.
     }
 }
