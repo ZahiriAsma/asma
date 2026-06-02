@@ -51,7 +51,7 @@ class StockController extends Controller
      */
     private function getDynamicBLQuantitiesAndSyncProducts(): array
     {
-        $bls = BonLivraison::all();
+        $bls = BonLivraison::where('statut', 'Validé')->get();
         $blQuantities = [];
 
         foreach ($bls as $bl) {

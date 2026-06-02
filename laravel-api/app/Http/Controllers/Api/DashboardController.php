@@ -54,20 +54,30 @@ class DashboardController extends Controller
                 }
             }
 
-            // 6. Graphique BarChart : Budget Total vs Budget Consommé (BL Validés) — 10 derniers marchés
-            $marchesChart = Marche::where('statut', '!=', 'Clôturé')
-                ->orderBy('created_at', 'desc')
-                ->take(10)
+            // 6. Tous les marchés triés par budget décroissant (Bar Chart + Pie Chart)
+            $allMarches = Marche::where('budget', '>', 0)
+                ->orderBy('budget', 'desc')
                 ->get()
                 ->map(function ($marche) use ($blConsommes) {
                     return [
+                        'id'              => $marche->id,
                         'name'            => $marche->titulaire ?? 'Marché #' . $marche->id,
                         'budget_total'    => (float) $marche->budget,
                         'budget_consomme' => (float) ($blConsommes[$marche->id] ?? 0),
+                        'statut'          => $marche->statut,
                     ];
                 });
 
-            // 7. Répartition des Marchés par statut (Donut Chart)
+            $grandTotal = $allMarches->sum('budget_total');
+
+            // Ajouter le pourcentage pour le Pie Chart
+            $marchesWithPercent = $allMarches->map(function ($m) use ($grandTotal) {
+                return array_merge($m, [
+                    'percentage' => $grandTotal > 0 ? round(($m['budget_total'] / $grandTotal) * 100, 1) : 0,
+                ]);
+            });
+
+            // Répartition par statut (Donut secondaire)
             $marchesDistribution = Marche::select('statut', DB::raw('count(*) as total'))
                 ->groupBy('statut')
                 ->get()
@@ -99,7 +109,9 @@ class DashboardController extends Controller
                 'products_in_stock_count' => $productsInStockCount,
                 'fournisseurs_count'      => $fournisseursCount,
                 'critical_alert'          => $criticalAlert,
-                'marches_chart'           => $marchesChart,
+                'marches_chart'           => $marchesWithPercent,   // Bar Chart (tous les marchés triés budget DESC)
+                'marches_pie'             => $marchesWithPercent,    // Pie Chart (mêmes données)
+                'grand_total_budget'      => $grandTotal,
                 'latest_orders'           => $latestOrders,
                 'marches_distribution'    => $marchesDistribution,
                 'total_marches_pie'       => $totalMarchesForPie,

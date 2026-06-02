@@ -758,74 +758,105 @@ const DashboardPage = () => {
               {/* Charts Section */}
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', marginBottom: '24px' }}>
 
-                {/* Bar Chart */}
+                {/* Bar Chart — Budget Total vs Consommé par Marché */}
                 <div style={{ backgroundColor: clr.card, borderRadius: '16px', padding: '24px', border: `1px solid ${clr.cardBorder}`, boxShadow: '0 1px 2px rgba(0,0,0,0.02)', transition: 'background-color 0.3s, border-color 0.3s' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                     <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: clr.text, display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <BarChart3 size={18} color="#0f766e" />
-                      {nt.monthlyConsumption}
+                      Budget par Marché
                     </h3>
-                    <button style={{ backgroundColor: isDark ? '#334155' : '#f1f5f9', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: '600', color: isDark ? '#f1f5f9' : '#475569', cursor: 'pointer', transition: 'all 0.2s' }}>{nt.report}</button>
+                    <div style={{ display: 'flex', gap: '16px', fontSize: '11px', fontWeight: '600', color: clr.textMuted }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><span style={{ width: '10px', height: '10px', borderRadius: '2px', backgroundColor: '#2563eb', display: 'inline-block' }}></span>Budget Total</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><span style={{ width: '10px', height: '10px', borderRadius: '2px', backgroundColor: '#10b981', display: 'inline-block' }}></span>Consommé</span>
+                    </div>
                   </div>
-                  <div style={{ height: '240px', width: '100%' }}>
+                  <div style={{ height: '240px', width: '100%', overflowX: 'auto' }}>
                     <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                      <BarChart data={dashboardStats?.marches_chart || []} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                      <BarChart data={dashboardStats?.marches_chart || []} margin={{ top: 0, right: 8, left: -20, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#334155' : '#f1f5f9'} />
-                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: isDark ? '#94a3b8' : '#94a3b8' }} dy={10} tickFormatter={(value) => value.length > 10 ? value.substring(0, 10) + '...' : value} />
-                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: isDark ? '#94a3b8' : '#94a3b8' }} />
-                        <Tooltip cursor={{ fill: isDark ? '#1e293b' : '#f8fafc' }} contentStyle={{ borderRadius: '8px', border: 'none', backgroundColor: clr.card, color: clr.text, boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }} />
-                        <Bar dataKey="budget_total" fill="#2563eb" radius={[4, 4, 0, 0]} barSize={12} name="Budget Total" />
-                        <Bar dataKey="budget_consomme" fill="#10b981" radius={[4, 4, 0, 0]} barSize={12} name="Budget Consommé" />
+                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: isDark ? '#94a3b8' : '#94a3b8' }} dy={10} tickFormatter={(v) => v.length > 12 ? v.substring(0, 12) + '…' : v} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: isDark ? '#94a3b8' : '#94a3b8' }} tickFormatter={(v) => v >= 1000000 ? `${(v/1000000).toFixed(1)}M` : v >= 1000 ? `${(v/1000).toFixed(0)}K` : v} />
+                        <Tooltip
+                          cursor={{ fill: isDark ? '#1e293b' : '#f8fafc' }}
+                          contentStyle={{ borderRadius: '10px', border: 'none', backgroundColor: clr.card, color: clr.text, boxShadow: '0 4px 20px rgba(0,0,0,0.15)', padding: '12px 16px' }}
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              const d = payload[0].payload;
+                              const pct = d.budget_total > 0 ? ((d.budget_consomme / d.budget_total) * 100).toFixed(1) : 0;
+                              return (
+                                <div style={{ backgroundColor: clr.card, border: `1px solid ${clr.cardBorder}`, borderRadius: '10px', padding: '12px 16px', fontSize: '12px' }}>
+                                  <div style={{ fontWeight: '700', color: clr.text, marginBottom: '8px', maxWidth: '200px' }}>{d.name}</div>
+                                  <div style={{ color: '#2563eb', marginBottom: '4px' }}>● Budget Total : <strong>{d.budget_total.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD</strong></div>
+                                  <div style={{ color: '#10b981', marginBottom: '4px' }}>● Consommé : <strong>{d.budget_consomme.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD</strong></div>
+                                  <div style={{ color: clr.textMuted }}>● Taux : <strong>{pct}%</strong></div>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        <Bar dataKey="budget_total" fill="#2563eb" radius={[4, 4, 0, 0]} barSize={10} name="Budget Total" />
+                        <Bar dataKey="budget_consomme" fill="#10b981" radius={[4, 4, 0, 0]} barSize={10} name="Budget Consommé" />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
                 </div>
 
-                {/* Donut Chart - Répartition des Marchés */}
-                <div style={{ backgroundColor: clr.card, borderRadius: '16px', padding: '24px', border: `1px solid ${clr.cardBorder}`, boxShadow: '0 1px 2px rgba(0,0,0,0.02)', transition: 'background-color 0.3s, border-color 0.3s' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: clr.text, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <PieChartIcon size={18} color="#0f766e" />
-                      Répartition Marchés
-                    </h3>
-                  </div>
+                {/* Pie Chart — Répartition des budgets par Marché */}
+                <div style={{ backgroundColor: clr.card, borderRadius: '16px', padding: '24px', border: `1px solid ${clr.cardBorder}`, boxShadow: '0 1px 2px rgba(0,0,0,0.02)', transition: 'background-color 0.3s, border-color 0.3s', overflow: 'hidden' }}>
+                  <h3 style={{ margin: '0 0 8px 0', fontSize: '15px', fontWeight: '700', color: clr.text, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <PieChartIcon size={18} color="#0f766e" />
+                    Répartition Budget
+                  </h3>
                   {(() => {
-                    const PIE_COLORS = ['#10b981', '#f59e0b', '#3b82f6', '#ef4444', '#8b5cf6'];
-                    const dynamicPieData = (dashboardStats?.marches_distribution || []).map((item, i) => ({
-                      ...item,
+                    const PIE_COLORS = ['#0f766e','#2563eb','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#10b981','#ec4899','#f97316','#84cc16'];
+                    const pieData = (dashboardStats?.marches_pie || []).map((m, i) => ({
+                      name: m.name,
+                      value: m.budget_total,
+                      percentage: m.percentage,
                       color: PIE_COLORS[i % PIE_COLORS.length]
                     }));
-                    const total = dashboardStats?.total_marches_pie || 0;
+                    const grandTotal = dashboardStats?.grand_total_budget || 0;
+                    const grandTotalK = grandTotal >= 1000000
+                      ? `${(grandTotal / 1000000).toFixed(2)}M`
+                      : grandTotal >= 1000 ? `${Math.round(grandTotal / 1000)}K` : `${Math.round(grandTotal)}`;
+
                     return (
                       <>
-                        <div style={{ height: '180px', width: '100%', position: 'relative' }}>
+                        <div style={{ height: '170px', width: '100%', position: 'relative' }}>
                           <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                             <RechartsPieChart>
-                              <Pie data={dynamicPieData} cx="50%" cy="50%" innerRadius={50} outerRadius={70} paddingAngle={2} dataKey="value" stroke="none">
-                                {dynamicPieData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
+                              <Pie data={pieData} cx="50%" cy="50%" innerRadius={48} outerRadius={68} paddingAngle={2} dataKey="value" stroke="none">
+                                {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
                               </Pie>
+                              <Tooltip
+                                contentStyle={{ borderRadius: '8px', border: 'none', backgroundColor: clr.card, color: clr.text, boxShadow: '0 4px 10px rgba(0,0,0,0.1)', fontSize: '12px' }}
+                                formatter={(value, name) => [`${value.toLocaleString('fr-FR')} MAD`, name]}
+                              />
                             </RechartsPieChart>
                           </ResponsiveContainer>
-                          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
-                            <div style={{ fontSize: '18px', fontWeight: '800', color: clr.text }}>{total}</div>
-                            <div style={{ fontSize: '10px', color: clr.textMuted, fontWeight: '600' }}>Marchés</div>
+                          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', pointerEvents: 'none' }}>
+                            <div style={{ fontSize: '15px', fontWeight: '800', color: clr.text, lineHeight: 1.1 }}>{grandTotalK}</div>
+                            <div style={{ fontSize: '9px', color: clr.textMuted, fontWeight: '600', marginTop: '2px' }}>Budget Total</div>
+                            <div style={{ fontSize: '9px', color: clr.textMuted, fontWeight: '500' }}>MAD</div>
                           </div>
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px' }}>
-                          {dynamicPieData.map((item, i) => (
-                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: clr.textMuted, fontWeight: '500' }}>
-                              <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: item.color }}></div>
-                              <div style={{ flex: 1, textAlign: isRtl ? 'right' : 'left' }}>{item.name}</div>
-                              <div style={{ fontWeight: '700', color: clr.text }}>{total > 0 ? Math.round((item.value / total) * 100) : 0}%</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginTop: '8px', maxHeight: '120px', overflowY: 'auto' }}>
+                          {pieData.map((item, i) => (
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: clr.textMuted }}>
+                              <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: item.color, flexShrink: 0 }}></div>
+                              <div style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</div>
+                              <div style={{ fontWeight: '700', color: clr.text, flexShrink: 0 }}>{item.percentage}%</div>
                             </div>
                           ))}
-                          {dynamicPieData.length === 0 && <div style={{ textAlign: 'center', color: clr.textMuted, fontSize: '12px' }}>Aucun marché</div>}
+                          {pieData.length === 0 && <div style={{ textAlign: 'center', color: clr.textMuted, fontSize: '12px' }}>Aucun marché</div>}
                         </div>
                       </>
                     );
                   })()}
                 </div>
               </div>
+
 
               {/* Bottom Section */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
