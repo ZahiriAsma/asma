@@ -14,6 +14,49 @@ import StockContent from './StockContent';
 import { useDashboard } from '../context/DashboardContext';
 import api from '../api/axios';
 
+const CustomTooltip = ({ active, payload, label, isDark, clr }) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    return (
+      <div style={{ backgroundColor: clr.card, padding: '12px', border: `1px solid ${clr.cardBorder}`, borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', color: clr.text, fontSize: '12px' }}>
+        <p style={{ fontWeight: 'bold', marginBottom: '8px', borderBottom: `1px solid ${clr.cardBorder}`, paddingBottom: '4px', margin: '0 0 8px 0' }}>{data.name}</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
+            <span style={{ color: '#2563eb', fontWeight: '600' }}>Budget Total:</span>
+            <span>{(data.budget_total || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
+            <span style={{ color: '#10b981', fontWeight: '600' }}>Budget Consommé:</span>
+            <span>{(data.budget_consomme || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
+            <span style={{ color: '#f59e0b', fontWeight: '600' }}>Budget Restant:</span>
+            <span>{(data.budget_restant || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', marginTop: '4px', paddingTop: '4px', borderTop: `1px dotted ${clr.cardBorder}` }}>
+            <span style={{ fontWeight: '600' }}>Pourcentage Consommé:</span>
+            <span style={{ fontWeight: 'bold' }}>{data.pourcentage_consomme || 0} %</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
+const PieCustomTooltip = ({ active, payload, clr }) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    return (
+      <div style={{ backgroundColor: clr.card, padding: '8px 12px', border: `1px solid ${clr.cardBorder}`, borderRadius: '6px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', color: clr.text, fontSize: '12px' }}>
+        <span style={{ fontWeight: '600', marginRight: '8px' }}>{data.name} :</span>
+        <span>{(data.value || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD</span>
+      </div>
+    );
+  }
+  return null;
+};
+
 const DashboardPage = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [localSearchQuery, setLocalSearchQuery] = useState('');
@@ -204,7 +247,7 @@ const DashboardPage = () => {
     return `${days[now.getDay()]} ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
   };
 
-  const userInternat = currentUser.establishment || 'Internat OFPPT Casablanca';
+  const userInternat = currentUser.establishment || 'Internat OFPPT Ouarzazate';
 
   // Recharts Data
   const barData = [

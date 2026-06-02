@@ -27,7 +27,7 @@ class DashboardController extends Controller
 
             // 4. Budget Consommé RÉEL par marché = SUM(total_ttc) des BL Validés
             $blConsommes = BonLivraison::select('marche_id', DB::raw('SUM(total_ttc) as montant_consomme'))
-                ->where('statut', 'Validé')
+                ->where('statut', '!=', 'Annulé')
                 ->whereNotNull('marche_id')
                 ->groupBy('marche_id')
                 ->pluck('montant_consomme', 'marche_id');

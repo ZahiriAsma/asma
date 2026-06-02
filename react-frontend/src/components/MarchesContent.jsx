@@ -283,11 +283,11 @@ const MarchesContent = () => {
     referenceBCs: bl.reference_bc ? bl.reference_bc.split(', ') : [],
     lieuLivraison: bl.client || 'Internat OFPPT Casablanca',
     fournisseur_id: bl.fournisseur_id?.toString() || '',
-    marche_id: bl.marche_id || null,
+    marche_id: bl.marche_id != null ? Number(bl.marche_id) : null,
     items: normalizeBlItems(bl.items),
     montantHT: bl.total_ht,
     montantTVA: bl.total_tva,
-    montantTTC: bl.total_ttc,
+    montantTTC: bl.total_ttc ?? 0,
     statut: bl.statut
   });
 
@@ -2993,7 +2993,7 @@ const MarchesContent = () => {
                     </div>
 
                     {(() => {
-                      const consumed = bls.filter(bl => bl.marche_id === marche.id)
+                      const consumed = bls.filter(bl => Number(bl.marche_id) === Number(marche.id))
                         .reduce((sum, bl) => sum + parseFloat(bl.montantTTC || 0), 0);
                       const budget = parseFloat(marche.budget || 0);
                       const progress = budget > 0 ? Math.min(100, (consumed / budget) * 100) : 0;
