@@ -524,27 +524,27 @@ const FicheTechniqueModal = ({ selectedMenu, onClose, date, dayText }) => {
       zIndex: 1000, backdropFilter: 'blur(8px)', padding: '24px'
     }}>
       <div style={{
-        backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '24px',
+        backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '24px',
         width: '100%', maxWidth: '1400px', maxHeight: '96vh', display: 'flex',
-        flexDirection: 'column', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
-        overflow: 'hidden', color: '#f8fafc'
+        flexDirection: 'column', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.2)',
+        overflow: 'hidden', color: '#0f172a'
       }}>
         {/* Header - Gradient & Title */}
         <div style={{
-          background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-          borderBottom: '1px solid #1e293b',
+          backgroundColor: '#ffffff',
+          borderBottom: '1px solid #e2e8f0',
           padding: '22px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center'
         }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '6px' }}>
               <div style={{ backgroundColor: '#0f766e', borderRadius: '12px', padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <FileText size={22} color="#2dd4bf" />
+                <FileText size={22} color="#ccfbf1" />
               </div>
               <div>
-                <h2 style={{ margin: 0, fontSize: '19px', fontWeight: '800', color: 'white', letterSpacing: '-0.02em' }}>
+                <h2 style={{ margin: 0, fontSize: '19px', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.02em' }}>
                   Fiches Techniques Journalières
                 </h2>
-                <p style={{ margin: 0, fontSize: '13px', color: '#94a3b8', fontWeight: '500' }}>
+                <p style={{ margin: 0, fontSize: '13px', color: '#64748b', fontWeight: '500' }}>
                   {dayText} · {defaultResidents} résidents
                 </p>
               </div>
@@ -594,12 +594,12 @@ const FicheTechniqueModal = ({ selectedMenu, onClose, date, dayText }) => {
 
             <button onClick={onClose}
               style={{
-                background: '#1e293b', border: '1px solid #334155', borderRadius: '12px',
+                background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px',
                 padding: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                transition: 'all 0.2s', color: '#94a3b8'
+                transition: 'all 0.2s', color: '#64748b'
               }}
-              onMouseEnter={e => { e.currentTarget.style.background = '#334155'; e.currentTarget.style.color = 'white'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = '#1e293b'; e.currentTarget.style.color = '#94a3b8'; }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#e2e8f0'; e.currentTarget.style.color = '#0f172a'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.color = '#64748b'; }}
             >
               <X size={18} />
             </button>
@@ -609,40 +609,42 @@ const FicheTechniqueModal = ({ selectedMenu, onClose, date, dayText }) => {
         {/* Global Summary */}
         <div style={{
           display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px',
-          padding: '20px 30px', backgroundColor: '#090d16', borderBottom: '1px solid #1e293b'
+          padding: '20px 30px', backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0'
         }}>
           <div style={{
-            backgroundColor: '#111827', border: '1px solid #1f2937', borderRadius: '16px',
-            padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '14px'
+            backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px',
+            padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '14px',
+            boxShadow: '0 1px 3px 0 rgba(0,0,0,0.05)'
           }}>
-            <div style={{ backgroundColor: 'rgba(15,118,110,0.15)', borderRadius: '10px', padding: '10px' }}>
-              <Landmark size={20} color="#2dd4bf" />
+            <div style={{ backgroundColor: 'rgba(15,118,110,0.1)', borderRadius: '10px', padding: '10px' }}>
+              <Landmark size={20} color="#0f766e" />
             </div>
             <div>
-              <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Budget Total du Jour</p>
-              <h4 style={{ margin: '4px 0 0', fontSize: '18px', fontWeight: '800', color: '#2dd4bf' }}>{totalAmount.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} DH</h4>
+              <p style={{ margin: 0, fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Budget Total du Jour</p>
+              <h4 style={{ margin: '4px 0 0', fontSize: '18px', fontWeight: '800', color: '#0f766e' }}>{totalAmount.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} DH</h4>
             </div>
           </div>
           <div style={{
-            backgroundColor: '#111827', border: '1px solid #1f2937', borderRadius: '16px',
-            padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '14px'
+            backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px',
+            padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '14px',
+            boxShadow: '0 1px 3px 0 rgba(0,0,0,0.05)'
           }}>
-            <div style={{ backgroundColor: 'rgba(14,165,233,0.15)', borderRadius: '10px', padding: '10px' }}>
-              <ShieldCheck size={20} color="#38bdf8" />
+            <div style={{ backgroundColor: 'rgba(14,165,233,0.1)', borderRadius: '10px', padding: '10px' }}>
+              <ShieldCheck size={20} color="#0284c7" />
             </div>
             <div>
-              <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ingrédients Sélectionnés</p>
-              <h4 style={{ margin: '4px 0 0', fontSize: '18px', fontWeight: '800', color: '#38bdf8' }}>{totalProductsCount} produit(s)</h4>
+              <p style={{ margin: 0, fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ingrédients Sélectionnés</p>
+              <h4 style={{ margin: '4px 0 0', fontSize: '18px', fontWeight: '800', color: '#0284c7' }}>{totalProductsCount} produit(s)</h4>
             </div>
           </div>
         </div>
 
         {/* Body Content */}
-        <div style={{ overflowY: 'auto', padding: '30px', display: 'flex', flexDirection: 'column', gap: '30px', backgroundColor: '#090d16' }}>
+        <div style={{ overflowY: 'auto', padding: '30px', display: 'flex', flexDirection: 'column', gap: '30px', backgroundColor: '#f8fafc' }}>
           {loading ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '100px 0', gap: '16px' }}>
               <Loader2 className="animate-spin" size={44} color="#0f766e" />
-              <p style={{ color: '#94a3b8', fontSize: '14px', fontWeight: '600' }}>Chargement des données...</p>
+              <p style={{ color: '#64748b', fontSize: '14px', fontWeight: '600' }}>Chargement des données...</p>
             </div>
           ) : (
             MEAL_TYPES.map(meal => {
@@ -650,13 +652,13 @@ const FicheTechniqueModal = ({ selectedMenu, onClose, date, dayText }) => {
               
               return (
                 <div key={meal.id} style={{
-                  backgroundColor: '#111827', borderRadius: '24px', padding: '28px',
-                  border: `1px solid #1f2937`, boxShadow: '0 10px 30px rgba(0,0,0,0.2)'
+                  backgroundColor: '#ffffff', borderRadius: '24px', padding: '28px',
+                  border: `1px solid ${meal.border}`, boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
                 }}>
                   {/* Meal Header */}
                   <div style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    marginBottom: '24px', paddingBottom: '18px', borderBottom: `1px solid #1f2937`
+                    marginBottom: '24px', paddingBottom: '18px', borderBottom: `1px solid ${meal.border}`
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                       <div style={{
@@ -666,13 +668,13 @@ const FicheTechniqueModal = ({ selectedMenu, onClose, date, dayText }) => {
                       }}>
                         <meal.icon size={22} color={meal.color} />
                       </div>
-                      <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '800', color: 'white' }}>
+                      <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '800', color: meal.color }}>
                         {meal.label}
                       </h3>
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                      <label style={{ fontSize: '13px', color: '#94a3b8', fontWeight: '700' }}>
+                      <label style={{ fontSize: '13px', color: '#64748b', fontWeight: '700' }}>
                         Nombre de personnes :
                       </label>
                       <input
@@ -682,12 +684,12 @@ const FicheTechniqueModal = ({ selectedMenu, onClose, date, dayText }) => {
                         onChange={e => handlePeopleCountChange(meal.id, e.target.value)}
                         style={{
                           width: '80px', padding: '10px 14px', borderRadius: '12px',
-                          border: '1px solid #374151', backgroundColor: '#1f2937',
-                          color: 'white', fontSize: '15px', fontWeight: '800', textAlign: 'center',
-                          outline: 'none', transition: 'border-color 0.2s', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.1)'
+                          border: '1px solid #e2e8f0', backgroundColor: '#f8fafc',
+                          color: '#0f172a', fontSize: '15px', fontWeight: '800', textAlign: 'center',
+                          outline: 'none', transition: 'border-color 0.2s', boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.05)'
                         }}
                         onFocus={e => e.currentTarget.style.borderColor = '#0f766e'}
-                        onBlur={e => e.currentTarget.style.borderColor = '#374151'}
+                        onBlur={e => e.currentTarget.style.borderColor = '#e2e8f0'}
                       />
                     </div>
                   </div>
@@ -704,9 +706,9 @@ const FicheTechniqueModal = ({ selectedMenu, onClose, date, dayText }) => {
                       return (
                         <div key={platName} style={{ marginBottom: '32px' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                            <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#64748b', display: 'flex', alignItems: 'center', gap: '8px' }}>
                               <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: meal.color }}></div>
-                              Plat: <span style={{ color: 'white' }}>{platName}</span>
+                              Plat: <span style={{ color: '#0f172a' }}>{platName}</span>
                             </h4>
                             <button
                               onClick={() => openIngredientModal(meal.id, platName)}
@@ -726,17 +728,17 @@ const FicheTechniqueModal = ({ selectedMenu, onClose, date, dayText }) => {
                           </div>
 
                           {items.length > 0 ? (
-                            <div style={{ overflowX: 'auto', borderRadius: '12px', border: '1px solid #1f2937' }}>
+                            <div style={{ overflowX: 'auto', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                                 <thead>
-                                  <tr style={{ backgroundColor: '#1e293b', borderBottom: '1px solid #374151' }}>
-                                    <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '700', color: '#94a3b8', fontSize: '11px', textTransform: 'uppercase' }}>Ingrédient</th>
-                                    <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: '700', color: '#94a3b8', fontSize: '11px', textTransform: 'uppercase' }}>Qté / 70 pers.</th>
-                                    <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: '700', color: '#94a3b8', fontSize: '11px', textTransform: 'uppercase' }}>Qté Totale</th>
-                                    <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: '700', color: '#94a3b8', fontSize: '11px', textTransform: 'uppercase' }}>R</th>
-                                    <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: '700', color: '#94a3b8', fontSize: '11px', textTransform: 'uppercase' }}>PU</th>
-                                    <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: '700', color: '#94a3b8', fontSize: '11px', textTransform: 'uppercase' }}>PUR +/-</th>
-                                    <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: '700', color: '#94a3b8', fontSize: '11px', textTransform: 'uppercase' }}>Montant</th>
+                                  <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                                    <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '700', color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Ingrédient</th>
+                                    <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: '700', color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Qté / 70 pers.</th>
+                                    <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: '700', color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Qté Totale</th>
+                                    <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: '700', color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>R</th>
+                                    <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: '700', color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>PU</th>
+                                    <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: '700', color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>PUR +/-</th>
+                                    <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: '700', color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Montant</th>
                                     <th style={{ padding: '12px 16px', textAlign: 'center', width: '50px' }}></th>
                                   </tr>
                                 </thead>
@@ -745,9 +747,9 @@ const FicheTechniqueModal = ({ selectedMenu, onClose, date, dayText }) => {
                                     const pur = row.pu_r / (row.r || 1);
                                     const bName = row.item?.header?.market_name || row.item?.bordereau_name || 'Bordereau';
                                     return (
-                                      <tr key={row.id || idx} style={{ borderBottom: '1px solid #1f2937' }} onMouseEnter={e => e.currentTarget.style.backgroundColor = '#1e293b'} onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                                      <tr key={row.id || idx} style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: 'white' }} onMouseEnter={e => e.currentTarget.style.backgroundColor = '#f8fafc'} onMouseLeave={e => e.currentTarget.style.backgroundColor = 'white'}>
                                         <td style={{ padding: '12px 16px' }}>
-                                          <div style={{ fontWeight: '600', color: 'white' }}>{row.item?.service_description}</div>
+                                          <div style={{ fontWeight: '600', color: '#0f172a' }}>{row.item?.service_description}</div>
                                           <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>{bName}</div>
                                         </td>
                                         <td style={{ padding: '12px 16px', textAlign: 'center' }}>
@@ -759,14 +761,14 @@ const FicheTechniqueModal = ({ selectedMenu, onClose, date, dayText }) => {
                                               style={{
                                                 width: '70px', padding: '6px 8px', textAlign: 'center',
                                                 border: '1px solid #0f766e', borderRadius: '8px',
-                                                backgroundColor: 'rgba(15,118,110,0.1)', color: '#2dd4bf', fontSize: '13px',
+                                                backgroundColor: '#f0fdfa', color: '#0f766e', fontSize: '13px',
                                                 fontWeight: '700', outline: 'none'
                                               }}
                                             />
                                             <span style={{ fontSize: '11px', color: '#64748b' }}>{row.item?.unit_of_measure}</span>
                                           </div>
                                         </td>
-                                        <td style={{ padding: '12px 16px', textAlign: 'center', fontWeight: '600', color: '#cbd5e1' }}>
+                                        <td style={{ padding: '12px 16px', textAlign: 'center', fontWeight: '600', color: '#334155' }}>
                                           {Number(row.calculated_quantity).toFixed(2)} {row.item?.unit_of_measure}
                                         </td>
                                         <td style={{ padding: '12px 16px', textAlign: 'center' }}>
@@ -776,18 +778,18 @@ const FicheTechniqueModal = ({ selectedMenu, onClose, date, dayText }) => {
                                             onChange={e => handleRowChange(meal.id, platName, idx, 'r', e.target.value)}
                                             style={{
                                               width: '50px', padding: '4px', textAlign: 'center',
-                                              border: '1px solid #374151', borderRadius: '6px',
-                                              backgroundColor: '#1f2937', color: 'white', fontSize: '12px', outline: 'none'
+                                              border: '1px solid #cbd5e1', borderRadius: '6px',
+                                              backgroundColor: 'white', color: '#0f172a', fontSize: '12px', outline: 'none'
                                             }}
                                           />
                                         </td>
-                                        <td style={{ padding: '12px 16px', textAlign: 'center', color: '#cbd5e1' }}>
+                                        <td style={{ padding: '12px 16px', textAlign: 'center', color: '#475569' }}>
                                           {Number(row.pu_r).toFixed(2)}
                                         </td>
-                                        <td style={{ padding: '12px 16px', textAlign: 'center', color: '#cbd5e1' }}>
+                                        <td style={{ padding: '12px 16px', textAlign: 'center', color: '#475569' }}>
                                           {pur.toFixed(4)}
                                         </td>
-                                        <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: '800', color: '#2dd4bf' }}>
+                                        <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: '800', color: '#0f766e' }}>
                                           {Number(row.amount).toFixed(2)}
                                         </td>
                                         <td style={{ padding: '12px 16px', textAlign: 'center' }}>
@@ -806,7 +808,7 @@ const FicheTechniqueModal = ({ selectedMenu, onClose, date, dayText }) => {
                             </div>
                           ) : (
                             <div style={{
-                              padding: '20px', border: '1px dashed #374151', borderRadius: '12px',
+                              padding: '20px', border: '1px dashed #cbd5e1', borderRadius: '12px',
                               textAlign: 'center', color: '#64748b', fontSize: '13px'
                             }}>
                               Aucun ingrédient sélectionné pour ce plat.
@@ -826,29 +828,29 @@ const FicheTechniqueModal = ({ selectedMenu, onClose, date, dayText }) => {
       {/* INGREDIENT SELECTOR MODAL */}
       {isIngredientModalOpen && (
         <div style={{
-          position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)',
+          position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100, backdropFilter: 'blur(4px)'
         }}>
           <div style={{
-            backgroundColor: '#1e293b', borderRadius: '16px', width: '100%', maxWidth: '900px',
-            maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.7)',
-            border: '1px solid #334155'
+            backgroundColor: '#ffffff', borderRadius: '16px', width: '100%', maxWidth: '900px',
+            maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+            border: '1px solid #e2e8f0'
           }}>
             {/* Header */}
-            <div style={{ padding: '20px 24px', borderBottom: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: 'white' }}>Gérer les ingrédients</h3>
-                <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#94a3b8' }}>Plat: <span style={{ color: '#2dd4bf' }}>{currentPlatForModal}</span></p>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#0f172a' }}>Gérer les ingrédients</h3>
+                <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#64748b' }}>Plat: <span style={{ color: '#0f766e', fontWeight: '600' }}>{currentPlatForModal}</span></p>
               </div>
-              <button onClick={() => setIsIngredientModalOpen(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>
+              <button onClick={() => setIsIngredientModalOpen(false)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}>
                 <X size={20} />
               </button>
             </div>
 
             {/* Filters */}
-            <div style={{ padding: '20px 24px', borderBottom: '1px solid #334155', display: 'flex', gap: '16px', backgroundColor: '#0f172a' }}>
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid #e2e8f0', display: 'flex', gap: '16px', backgroundColor: '#f8fafc' }}>
               <div style={{ flex: 1, position: 'relative' }}>
-                <Search size={16} color="#64748b" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
+                <Search size={16} color="#94a3b8" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
                 <input 
                   type="text" 
                   placeholder="Rechercher par désignation..." 
@@ -856,20 +858,20 @@ const FicheTechniqueModal = ({ selectedMenu, onClose, date, dayText }) => {
                   onChange={e => setIngredientSearch(e.target.value)}
                   style={{
                     width: '100%', padding: '10px 14px 10px 40px', borderRadius: '10px',
-                    border: '1px solid #374151', backgroundColor: '#1e293b', color: 'white',
+                    border: '1px solid #cbd5e1', backgroundColor: '#ffffff', color: '#0f172a',
                     fontSize: '14px', outline: 'none', boxSizing: 'border-box'
                   }}
                   autoFocus
                 />
               </div>
               <div style={{ position: 'relative', width: '300px' }}>
-                <Filter size={16} color="#64748b" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
+                <Filter size={16} color="#94a3b8" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
                 <select
                   value={selectedBordereauFilter}
                   onChange={e => setSelectedBordereauFilter(e.target.value)}
                   style={{
                     width: '100%', padding: '10px 14px 10px 40px', borderRadius: '10px',
-                    border: '1px solid #374151', backgroundColor: '#1e293b', color: 'white',
+                    border: '1px solid #cbd5e1', backgroundColor: '#ffffff', color: '#0f172a',
                     fontSize: '14px', outline: 'none', appearance: 'none', boxSizing: 'border-box'
                   }}
                 >
@@ -885,13 +887,13 @@ const FicheTechniqueModal = ({ selectedMenu, onClose, date, dayText }) => {
             {/* List */}
             <div style={{ overflowY: 'auto', flex: 1, padding: '0' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-                <thead style={{ position: 'sticky', top: 0, backgroundColor: '#1e293b', zIndex: 10 }}>
-                  <tr style={{ borderBottom: '1px solid #334155' }}>
+                <thead style={{ position: 'sticky', top: 0, backgroundColor: '#f8fafc', zIndex: 10 }}>
+                  <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
                     <th style={{ padding: '12px 24px', width: '40px' }}></th>
-                    <th style={{ padding: '12px 16px', textAlign: 'left', color: '#94a3b8', fontWeight: '600' }}>Désignation</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'left', color: '#94a3b8', fontWeight: '600' }}>Bordereau Source</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'center', color: '#94a3b8', fontWeight: '600' }}>Unité</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'right', color: '#94a3b8', fontWeight: '600' }}>Prix (PU)</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', color: '#64748b', fontWeight: '600' }}>Désignation</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', color: '#64748b', fontWeight: '600' }}>Bordereau Source</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'center', color: '#64748b', fontWeight: '600' }}>Unité</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'right', color: '#64748b', fontWeight: '600' }}>Prix (PU)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -902,31 +904,33 @@ const FicheTechniqueModal = ({ selectedMenu, onClose, date, dayText }) => {
                         key={ing.id} 
                         onClick={() => toggleIngredientSelection(ing.id)}
                         style={{ 
-                          borderBottom: '1px solid #334155', cursor: 'pointer',
-                          backgroundColor: isSelected ? 'rgba(15,118,110,0.1)' : 'transparent',
+                          borderBottom: '1px solid #e2e8f0', cursor: 'pointer',
+                          backgroundColor: isSelected ? 'rgba(15,118,110,0.05)' : 'white',
                           transition: 'background-color 0.1s'
                         }}
+                        onMouseEnter={e => { if (!isSelected) e.currentTarget.style.backgroundColor = '#f8fafc'; }}
+                        onMouseLeave={e => { if (!isSelected) e.currentTarget.style.backgroundColor = 'white'; }}
                       >
                         <td style={{ padding: '12px 24px', textAlign: 'center' }}>
                           <div style={{
                             width: '18px', height: '18px', borderRadius: '4px',
-                            border: `2px solid ${isSelected ? '#2dd4bf' : '#475569'}`,
+                            border: `2px solid ${isSelected ? '#0f766e' : '#cbd5e1'}`,
                             backgroundColor: isSelected ? '#0f766e' : 'transparent',
                             display: 'flex', alignItems: 'center', justifyContent: 'center'
                           }}>
                             {isSelected && <Check size={12} color="white" strokeWidth={3} />}
                           </div>
                         </td>
-                        <td style={{ padding: '12px 16px', color: isSelected ? '#fff' : '#cbd5e1', fontWeight: isSelected ? '600' : '400' }}>
+                        <td style={{ padding: '12px 16px', color: isSelected ? '#0f766e' : '#0f172a', fontWeight: isSelected ? '600' : '400' }}>
                           {ing.service_description}
                         </td>
                         <td style={{ padding: '12px 16px', color: '#64748b', fontSize: '12px' }}>
                           {ing.bordereau_name}
                         </td>
-                        <td style={{ padding: '12px 16px', textAlign: 'center', color: '#94a3b8' }}>
+                        <td style={{ padding: '12px 16px', textAlign: 'center', color: '#64748b' }}>
                           {ing.unit_of_measure || '-'}
                         </td>
-                        <td style={{ padding: '12px 16px', textAlign: 'right', color: '#cbd5e1', fontWeight: '500' }}>
+                        <td style={{ padding: '12px 16px', textAlign: 'right', color: '#334155', fontWeight: '500' }}>
                           {Number(ing.unit_price_ht).toFixed(2)} DH
                         </td>
                       </tr>
@@ -941,7 +945,7 @@ const FicheTechniqueModal = ({ selectedMenu, onClose, date, dayText }) => {
                   )}
                   {filteredIngredients.length > 100 && (
                      <tr>
-                     <td colSpan={5} style={{ padding: '16px', textAlign: 'center', color: '#64748b', fontSize: '12px', backgroundColor: '#0f172a' }}>
+                     <td colSpan={5} style={{ padding: '16px', textAlign: 'center', color: '#64748b', fontSize: '12px', backgroundColor: '#f8fafc' }}>
                        Plus de 100 résultats trouvés. Veuillez affiner votre recherche.
                      </td>
                    </tr>
@@ -951,8 +955,8 @@ const FicheTechniqueModal = ({ selectedMenu, onClose, date, dayText }) => {
             </div>
 
             {/* Footer */}
-            <div style={{ padding: '16px 24px', borderTop: '1px solid #334155', display: 'flex', justifyContent: 'flex-end', gap: '12px', backgroundColor: '#0f172a' }}>
-              <button onClick={() => setIsIngredientModalOpen(false)} style={{ padding: '10px 20px', borderRadius: '10px', border: '1px solid #374151', backgroundColor: 'transparent', color: '#cbd5e1', cursor: 'pointer', fontWeight: '600' }}>
+            <div style={{ padding: '16px 24px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '12px', backgroundColor: '#f8fafc' }}>
+              <button onClick={() => setIsIngredientModalOpen(false)} style={{ padding: '10px 20px', borderRadius: '10px', border: '1px solid #cbd5e1', backgroundColor: 'white', color: '#475569', cursor: 'pointer', fontWeight: '600' }}>
                 Annuler
               </button>
               <button onClick={confirmIngredientSelection} style={{ padding: '10px 20px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, #0f766e 0%, #059669 100%)', color: 'white', cursor: 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
