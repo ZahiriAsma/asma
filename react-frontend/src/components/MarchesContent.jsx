@@ -3071,7 +3071,25 @@ const MarchesContent = () => {
             backgroundColor: 'white', borderRadius: '16px', width: '100%', maxWidth: '500px',
             padding: '32px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)'
           }}>
-            <h2 style={{ margin: '0 0 24px 0', fontSize: '20px', color: '#0f172a' }}>Ajouter un nouveau marché</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <h2 style={{ margin: 0, fontSize: '20px', color: '#0f172a' }}>Ajouter un nouveau marché</h2>
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                style={{
+                  background: '#f1f5f9', border: 'none', borderRadius: '50%',
+                  width: '32px', height: '32px', display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', cursor: 'pointer', color: '#64748b',
+                  fontSize: '18px', fontWeight: 'bold', lineHeight: 1, flexShrink: 0,
+                  transition: 'background 0.2s'
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = '#e2e8f0'}
+                onMouseLeave={e => e.currentTarget.style.background = '#f1f5f9'}
+                title="Fermer"
+              >
+                ✕
+              </button>
+            </div>
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>

@@ -64,4 +64,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Stock Routes
     Route::get('/stocks', [\App\Http\Controllers\Api\StockController::class, 'index']);
     Route::get('/stocks/export', [\App\Http\Controllers\Api\StockController::class, 'export']);
+
+    // Dashboard Route
+    Route::get('/dashboard/stats', [\App\Http\Controllers\Api\DashboardController::class, 'stats']);
 });

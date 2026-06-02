@@ -7,6 +7,7 @@ import api from '../api/axios';
 
 const FournisseursContent = () => {
   const [fournisseurs, setFournisseurs] = useState([]);
+  const [marches, setMarches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -37,7 +38,17 @@ const FournisseursContent = () => {
 
   useEffect(() => {
     fetchFournisseurs();
+    fetchMarches();
   }, []);
+
+  const fetchMarches = async () => {
+    try {
+      const res = await api.get('/marches');
+      setMarches(res.data);
+    } catch (err) {
+      console.error('Erreur chargement marchés:', err);
+    }
+  };
 
   const fetchFournisseurs = async () => {
     setLoading(true);
@@ -118,17 +129,30 @@ const FournisseursContent = () => {
     return name.slice(0, 2).toUpperCase();
   };
 
-  // Helper to get random stats for card rendering (mocked like screenshot)
+  // Calcule les vraies stats par fournisseur depuis les marchés
   const getCardStats = (fournisseur) => {
-    // Deterministic random stats based on supplier ID to match mockup visual style
-    const id = fournisseur.id || 1;
-    const stats = [
-      { marches: 3, budget: '128K', conformity: '98%', avatarBg: '#0f766e', textBg: '#ecfdf5', color: '#10b981' },
-      { marches: 2, budget: '67K', conformity: '94%', avatarBg: '#047857', textBg: '#ecfdf5', color: '#10b981' },
-      { marches: 1, budget: '31K', conformity: '81%', avatarBg: '#6b21a8', textBg: '#fffbeb', color: '#d97706' }
-    ];
-    return stats[(id - 1) % stats.length];
+    const AVATAR_COLORS = ['#0f766e', '#047857', '#6b21a8', '#b45309', '#1e40af'];
+    const idx = (fournisseur.id - 1) % AVATAR_COLORS.length;
+    const avatarBg = AVATAR_COLORS[idx];
+
+    // Marchés liés à ce fournisseur
+    const fournisseurMarches = marches.filter(m => m.id_fournisseur === fournisseur.id);
+    const marchesCount = fournisseurMarches.length;
+    const budgetTotal = fournisseurMarches.reduce((acc, m) => acc + parseFloat(m.budget || 0), 0);
+    const budgetK = budgetTotal >= 1000
+      ? `${Math.round(budgetTotal / 1000)}K`
+      : `${Math.round(budgetTotal)}`;
+
+    return {
+      marches: marchesCount,
+      budget: budgetK,
+      conformity: '-',
+      avatarBg,
+    };
   };
+
+  // Nombre de marchés actifs (statut 'En cours') tous fournisseurs confondus
+  const activeMarchesCount = marches.filter(m => m.statut === 'En cours').length;
 
   // Render stars
   const renderStars = (note) => {
@@ -229,7 +253,7 @@ const FournisseursContent = () => {
           { label: 'TOTAL FOURNISSEURS', value: fournisseurs.length, icon: <Building2 size={20} color="#2563eb" />, bg: 'rgba(37,99,235,0.08)' },
           { label: 'ACTIFS', value: fournisseurs.filter(f => f.statut === 'Actif').length, icon: <CheckCircle2 size={20} color="#10b981" />, bg: 'rgba(16,185,129,0.08)' },
           { label: 'NOTE MOYENNE', value: fournisseurs.length > 0 ? (fournisseurs.reduce((acc, f) => acc + parseFloat(f.note || 5.0), 0) / fournisseurs.length).toFixed(1) + '/5' : '5.0/5', icon: <Star size={20} color="#f59e0b" />, bg: 'rgba(245,158,11,0.08)' },
-          { label: 'MARCHÉS EN COURS', value: '12', icon: <Award size={20} color="#6366f1" />, bg: 'rgba(99,102,241,0.08)' }
+          { label: 'MARCHÉS EN COURS', value: activeMarchesCount, icon: <Award size={20} color="#6366f1" />, bg: 'rgba(99,102,241,0.08)' }
         ].map((stat, i) => {
           const statClasses = ['stat-card-blue', 'stat-card-green', 'stat-card-orange', 'stat-card-indigo'];
           return (

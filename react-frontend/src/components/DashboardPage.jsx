@@ -12,10 +12,14 @@ import ParametresContent from './ParametresContent';
 import BordereauContent from './BordereauContent';
 import StockContent from './StockContent';
 import { useDashboard } from '../context/DashboardContext';
+import api from '../api/axios';
 
 const DashboardPage = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [localSearchQuery, setLocalSearchQuery] = useState('');
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [dashboardStats, setDashboardStats] = useState(null);
+  const [loadingStats, setLoadingStats] = useState(true);
 
   const {
     notifications,
@@ -120,6 +124,24 @@ const DashboardPage = () => {
       window.removeEventListener('user-profile-updated', handleProfileUpdate);
     };
   }, []);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        setLoadingStats(true);
+        const response = await api.get('/dashboard/stats');
+        setDashboardStats(response.data);
+      } catch (err) {
+        console.error("Erreur lors du chargement des statistiques du Dashboard:", err);
+      } finally {
+        setLoadingStats(false);
+      }
+    };
+    
+    if (activeTab === 'dashboard') {
+      fetchStats();
+    }
+  }, [activeTab]);
 
   // Sync theme and text direction globally with <html> and <body>
   useEffect(() => {
@@ -396,47 +418,6 @@ const DashboardPage = () => {
           <NavGroup title={nt.systeme} />
           <NavItem id="parametres" icon={Settings} label={nt.parametres} />
         </div>
-
-        {/* User Profile & Logout */}
-        <div style={{ padding: '20px' }}>
-          <div style={{
-            backgroundColor: '#1e293b', borderRadius: '12px', padding: '16px',
-            border: '1px solid rgba(255,255,255,0.05)'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-              <div style={{
-                width: '36px', height: '36px', backgroundColor: '#0f766e',
-                borderRadius: '8px', display: 'flex', alignItems: 'center',
-                justifyContent: 'center', fontWeight: 'bold', fontSize: '14px', position: 'relative'
-              }}>
-                {getInitials(currentUser.name)}
-                <div style={{
-                  position: 'absolute', bottom: '-2px', right: '-2px', width: '10px', height: '10px',
-                  backgroundColor: '#10b981', border: '2px solid #1e293b', borderRadius: '50%'
-                }}></div>
-              </div>
-              <div>
-                <div style={{ fontSize: '13px', fontWeight: '600', color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>
-                  {currentUser.name || 'Utilisateur'}
-                </div>
-                <div style={{ fontSize: '11px', color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>
-                  {currentUser.email || 'Gestionnaire'}
-                </div>
-              </div>
-            </div>
-
-            <button
-              onClick={handleLogout}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '8px',
-                width: '100%', padding: '0', background: 'none', border: 'none',
-                color: '#ef4444', fontSize: '12px', fontWeight: '600', cursor: 'pointer',
-              }}
-            >
-              <LogOut size={14} style={{ transform: isRtl ? 'rotate(180deg)' : 'none' }} /> {nt.logout}
-            </button>
-          </div>
-        </div>
       </aside>
 
       {/* ── MAIN CONTENT ── */}
@@ -631,12 +612,64 @@ const DashboardPage = () => {
               )}
             </div>
 
-            {/* User Avatar Small */}
-            <div 
-              onClick={() => setActiveTab('parametres')}
-              style={{ width: '32px', height: '32px', backgroundColor: '#0f766e', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}
-            >
-              {getInitials(currentUser.name)}
+            {/* User Avatar Small with Dropdown */}
+            <div style={{ position: 'relative' }}>
+              <div 
+                onClick={() => {
+                  setShowProfileDropdown(!showProfileDropdown);
+                  setShowNotifications(false);
+                }}
+                style={{ width: '32px', height: '32px', backgroundColor: '#0f766e', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}
+              >
+                {getInitials(currentUser.name)}
+              </div>
+              
+              {/* Profile Dropdown */}
+              {showProfileDropdown && (
+                <div style={{
+                  position: 'absolute', top: '100%', [isRtl ? 'left' : 'right']: '0',
+                  backgroundColor: clr.card, border: `1px solid ${clr.cardBorder}`,
+                  borderRadius: '12px', marginTop: '12px', width: '220px',
+                  boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                  zIndex: 100, padding: '16px', display: 'flex', flexDirection: 'column'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                    <div style={{
+                      width: '36px', height: '36px', backgroundColor: '#0f766e',
+                      borderRadius: '8px', display: 'flex', alignItems: 'center',
+                      justifyContent: 'center', color: 'white', fontWeight: 'bold', fontSize: '14px', position: 'relative'
+                    }}>
+                      {getInitials(currentUser.name)}
+                      <div style={{
+                        position: 'absolute', bottom: '-2px', right: '-2px', width: '10px', height: '10px',
+                        backgroundColor: '#10b981', border: `2px solid ${clr.card}`, borderRadius: '50%'
+                      }}></div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '13px', fontWeight: '600', color: clr.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>
+                        {currentUser.name || 'Utilisateur'}
+                      </div>
+                      <div style={{ fontSize: '11px', color: clr.textMuted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>
+                        {currentUser.email || 'Gestionnaire'}
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleLogout}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '8px',
+                      width: '100%', padding: '8px', background: 'rgba(239, 68, 68, 0.1)', border: 'none', borderRadius: '8px',
+                      color: '#ef4444', fontSize: '12px', fontWeight: '600', cursor: 'pointer', justifyContent: 'center',
+                      transition: 'background-color 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'}
+                  >
+                    <LogOut size={14} style={{ transform: isRtl ? 'rotate(180deg)' : 'none' }} /> {nt.logout}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </header>
@@ -667,32 +700,60 @@ const DashboardPage = () => {
 
               {/* 4 Stat Cards */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '24px' }}>
-                {[
-                  { label: nt.activeTenders, value: '12', trend: lang === 'ar' ? '+ ٢ هذا الربع' : (lang === 'en' ? '+ 2 this quarter' : '+ 2 ce trimestre'), icon: <FileSpreadsheet size={20} color="#2563eb" />, bg: 'rgba(37,99,235,0.1)', tColor: '#10b981' },
-                  { label: nt.stockProducts, value: '1,247', trend: lang === 'ar' ? '+ ٥٪ هذا الشهر' : (lang === 'en' ? '+ 5% this month' : '+ 5% ce mois'), icon: <Package size={20} color="#10b981" />, bg: 'rgba(16,185,129,0.1)', tColor: '#10b981' },
-                  { label: nt.suppliers, value: '38', trend: lang === 'ar' ? '٤ في الانتظار' : (lang === 'en' ? '4 pending' : '4 en attente'), icon: <Users size={20} color="#2563eb" />, bg: 'rgba(37,99,235,0.1)', tColor: '#f59e0b' },
-                  { label: nt.stockAlerts, value: '5', trend: lang === 'ar' ? 'مطلوب اتخاذ إجراء' : (lang === 'en' ? 'Action required' : 'Action requise'), icon: <AlertCircle size={20} color="#ef4444" />, bg: 'rgba(239,68,68,0.1)', tColor: '#ef4444' }
-                ].map((stat, i) => {
-                  const classes = ['stat-card-blue', 'stat-card-green', 'stat-card-orange', 'stat-card-red'];
-                  return (
-                    <div key={i}
-                      className={`stat-card ${classes[i]}`}
-                      style={{ backgroundColor: clr.card, borderRadius: '16px', padding: '20px', border: `1px solid ${clr.cardBorder}`, boxShadow: '0 1px 2px rgba(0,0,0,0.02)', transition: 'background-color 0.3s, border-color 0.3s' }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-                        <div style={{ fontSize: '11px', fontWeight: '700', color: clr.textMuted, letterSpacing: '0.05em' }}>{stat.label}</div>
-                        <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: stat.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          {stat.icon}
+                {loadingStats ? (
+                  <div style={{ gridColumn: '1 / -1', padding: '40px', textAlign: 'center', color: clr.textMuted }}>Chargement des statistiques...</div>
+                ) : (
+                  [
+                    { 
+                      label: nt.activeTenders, 
+                      value: dashboardStats?.active_marches_count ?? 0, 
+                      trend: 'Total Actifs', 
+                      icon: <FileSpreadsheet size={20} color="#2563eb" />, 
+                      bg: 'rgba(37,99,235,0.1)', tColor: '#10b981' 
+                    },
+                    { 
+                      label: nt.stockProducts, 
+                      value: dashboardStats?.products_in_stock_count ?? 0, 
+                      trend: 'En Magasin', 
+                      icon: <Package size={20} color="#10b981" />, 
+                      bg: 'rgba(16,185,129,0.1)', tColor: '#10b981' 
+                    },
+                    { 
+                      label: nt.suppliers, 
+                      value: dashboardStats?.fournisseurs_count ?? 0, 
+                      trend: 'Total Fournisseurs', 
+                      icon: <Users size={20} color="#2563eb" />, 
+                      bg: 'rgba(37,99,235,0.1)', tColor: '#f59e0b' 
+                    },
+                    { 
+                      label: 'Marché Critique', 
+                      value: dashboardStats?.critical_alert ? `${dashboardStats.critical_alert.percentage}%` : '0%', 
+                      trend: dashboardStats?.critical_alert ? dashboardStats.critical_alert.titulaire : 'Aucune alerte', 
+                      icon: <AlertCircle size={20} color="#ef4444" />, 
+                      bg: 'rgba(239,68,68,0.1)', tColor: '#ef4444' 
+                    }
+                  ].map((stat, i) => {
+                    const classes = ['stat-card-blue', 'stat-card-green', 'stat-card-orange', 'stat-card-red'];
+                    return (
+                      <div key={i}
+                        className={`stat-card ${classes[i]}`}
+                        style={{ backgroundColor: clr.card, borderRadius: '16px', padding: '20px', border: `1px solid ${clr.cardBorder}`, boxShadow: '0 1px 2px rgba(0,0,0,0.02)', transition: 'background-color 0.3s, border-color 0.3s' }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                          <div style={{ fontSize: '11px', fontWeight: '700', color: clr.textMuted, letterSpacing: '0.05em' }}>{stat.label}</div>
+                          <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: stat.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {stat.icon}
+                          </div>
+                        </div>
+                        <div style={{ fontSize: '28px', fontWeight: '700', color: clr.text, marginBottom: '8px' }}>{stat.value}</div>
+                        <div style={{ fontSize: '12px', fontWeight: '600', color: stat.tColor, display: 'flex', alignItems: 'center', gap: '4px', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                          {stat.trend.includes('+') ? <TrendingUp size={14} /> : (stat.tColor === '#ef4444' ? <AlertTriangle size={14} /> : null)}
+                          {stat.trend}
                         </div>
                       </div>
-                      <div style={{ fontSize: '28px', fontWeight: '700', color: clr.text, marginBottom: '8px' }}>{stat.value}</div>
-                      <div style={{ fontSize: '12px', fontWeight: '600', color: stat.tColor, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        {stat.trend.includes('+') ? <TrendingUp size={14} /> : (stat.tColor === '#ef4444' ? <AlertTriangle size={14} /> : null)}
-                        {stat.trend}
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                )}
               </div>
               {/* Charts Section */}
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', marginBottom: '24px' }}>
@@ -708,65 +769,66 @@ const DashboardPage = () => {
                   </div>
                   <div style={{ height: '240px', width: '100%' }}>
                     <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                      <BarChart data={barData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                      <BarChart data={dashboardStats?.marches_chart || []} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#334155' : '#f1f5f9'} />
-                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: isDark ? '#94a3b8' : '#94a3b8' }} dy={10} />
+                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: isDark ? '#94a3b8' : '#94a3b8' }} dy={10} tickFormatter={(value) => value.length > 10 ? value.substring(0, 10) + '...' : value} />
                         <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: isDark ? '#94a3b8' : '#94a3b8' }} />
                         <Tooltip cursor={{ fill: isDark ? '#1e293b' : '#f8fafc' }} contentStyle={{ borderRadius: '8px', border: 'none', backgroundColor: clr.card, color: clr.text, boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }} />
-                        <Bar dataKey="val1" fill="#2563eb" radius={[4, 4, 0, 0]} barSize={12} />
-                        <Bar dataKey="val2" fill="#10b981" radius={[4, 4, 0, 0]} barSize={12} />
+                        <Bar dataKey="budget_total" fill="#2563eb" radius={[4, 4, 0, 0]} barSize={12} name="Budget Total" />
+                        <Bar dataKey="budget_consomme" fill="#10b981" radius={[4, 4, 0, 0]} barSize={12} name="Budget Consommé" />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
                 </div>
 
-                {/* Donut Chart */}
+                {/* Donut Chart - Répartition des Marchés */}
                 <div style={{ backgroundColor: clr.card, borderRadius: '16px', padding: '24px', border: `1px solid ${clr.cardBorder}`, boxShadow: '0 1px 2px rgba(0,0,0,0.02)', transition: 'background-color 0.3s, border-color 0.3s' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                     <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: clr.text, display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <PieChartIcon size={18} color="#0f766e" />
-                      {nt.budgetDistribution}
+                      Répartition Marchés
                     </h3>
                   </div>
-                  <div style={{ height: '180px', width: '100%', position: 'relative' }}>
-                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                      <RechartsPieChart>
-                        <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={70} paddingAngle={2} dataKey="value" stroke="none">
-                          {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
-                        </Pie>
-                      </RechartsPieChart>
-                    </ResponsiveContainer>
-                    <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
-                      <div style={{ fontSize: '18px', fontWeight: '800', color: clr.text }}>842K</div>
-                      <div style={{ fontSize: '10px', color: clr.textMuted, fontWeight: '600' }}>MAD</div>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px' }}>
-                    {pieData.map((item, i) => (
-                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: clr.textMuted, fontWeight: '500' }}>
-                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: item.color }}></div>
-                        <div style={{ flex: 1, textAlign: isRtl ? 'right' : 'left' }}>
-                          {lang === 'ar' ? (
-                            item.name === 'Alimentation' ? 'التغذية' :
-                            item.name === 'Hygiène' ? 'النظافة' :
-                            item.name === 'Entretien' ? 'الصيانة' : 'متنوع'
-                          ) : (
-                            lang === 'en' ? (
-                              item.name === 'Alimentation' ? 'Food & Drink' :
-                              item.name === 'Hygiène' ? 'Hygiene' :
-                              item.name === 'Entretien' ? 'Maintenance' : 'Miscellaneous'
-                            ) : item.name
-                          )}
+                  {(() => {
+                    const PIE_COLORS = ['#10b981', '#f59e0b', '#3b82f6', '#ef4444', '#8b5cf6'];
+                    const dynamicPieData = (dashboardStats?.marches_distribution || []).map((item, i) => ({
+                      ...item,
+                      color: PIE_COLORS[i % PIE_COLORS.length]
+                    }));
+                    const total = dashboardStats?.total_marches_pie || 0;
+                    return (
+                      <>
+                        <div style={{ height: '180px', width: '100%', position: 'relative' }}>
+                          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                            <RechartsPieChart>
+                              <Pie data={dynamicPieData} cx="50%" cy="50%" innerRadius={50} outerRadius={70} paddingAngle={2} dataKey="value" stroke="none">
+                                {dynamicPieData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
+                              </Pie>
+                            </RechartsPieChart>
+                          </ResponsiveContainer>
+                          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
+                            <div style={{ fontSize: '18px', fontWeight: '800', color: clr.text }}>{total}</div>
+                            <div style={{ fontSize: '10px', color: clr.textMuted, fontWeight: '600' }}>Marchés</div>
+                          </div>
                         </div>
-                        <div style={{ fontWeight: '700', color: clr.text }}>{item.value}%</div>
-                      </div>
-                    ))}
-                  </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px' }}>
+                          {dynamicPieData.map((item, i) => (
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: clr.textMuted, fontWeight: '500' }}>
+                              <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: item.color }}></div>
+                              <div style={{ flex: 1, textAlign: isRtl ? 'right' : 'left' }}>{item.name}</div>
+                              <div style={{ fontWeight: '700', color: clr.text }}>{total > 0 ? Math.round((item.value / total) * 100) : 0}%</div>
+                            </div>
+                          ))}
+                          {dynamicPieData.length === 0 && <div style={{ textAlign: 'center', color: clr.textMuted, fontSize: '12px' }}>Aucun marché</div>}
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
 
               {/* Bottom Section */}
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
 
                 {/* Table */}
                 <div style={{ backgroundColor: clr.card, borderRadius: '16px', padding: '24px', border: `1px solid ${clr.cardBorder}`, boxShadow: '0 1px 2px rgba(0,0,0,0.02)', transition: 'background-color 0.3s, border-color 0.3s' }}>
@@ -777,77 +839,43 @@ const DashboardPage = () => {
                     </h3>
                     <button style={{ backgroundColor: 'transparent', border: `1px solid ${clr.cardBorder}`, padding: '6px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: '600', color: clr.textMuted, cursor: 'pointer', transition: 'all 0.2s' }}>{nt.seeAll}</button>
                   </div>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr style={{ borderBottom: `1px solid ${clr.cardBorder}`, textAlign: isRtl ? 'right' : 'left', fontSize: '11px', color: clr.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                        <th style={{ paddingBottom: '12px', fontWeight: '600' }}>{nt.orderNo}</th>
-                        <th style={{ paddingBottom: '12px', fontWeight: '600' }}>{nt.supplier}</th>
-                        <th style={{ paddingBottom: '12px', fontWeight: '600' }}>{nt.product}</th>
-                        <th style={{ paddingBottom: '12px', fontWeight: '600' }}>{nt.amount}</th>
-                        <th style={{ paddingBottom: '12px', fontWeight: '600' }}>{nt.status}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[
-                        { id: 'M-2024-001', vendor: 'DISMA Maroc', product: lang === 'ar' ? 'المواد الغذائية' : (lang === 'en' ? 'Food products' : 'Denrées alimentaires'), amount: '124,000 MAD', status: lang === 'ar' ? 'تم التسليم' : (lang === 'en' ? 'Delivered' : 'Livré'), sColor: '#10b981', sBg: 'rgba(16,185,129,0.1)' },
-                        { id: 'M-2024-002', vendor: 'AGRO Casablanca', product: lang === 'ar' ? 'منتجات النظافة' : (lang === 'en' ? 'Hygiene products' : 'Produits hygiéniques'), amount: '45,500 MAD', status: lang === 'ar' ? 'قيد التنفيذ' : (lang === 'en' ? 'In progress' : 'En cours'), sColor: '#f59e0b', sBg: 'rgba(245,158,11,0.1)' },
-                        { id: 'M-2024-003', vendor: 'EQUIP Pro', product: lang === 'ar' ? 'مواد الصيانة' : (lang === 'en' ? 'Maintenance tools' : 'Matériel d\'entretien'), amount: '22,800 MAD', status: lang === 'ar' ? 'تم التسليم' : (lang === 'en' ? 'Delivered' : 'Livré'), sColor: '#10b981', sBg: 'rgba(16,185,129,0.1)' },
-                        { id: 'M-2024-004', vendor: 'SOPROMA', product: lang === 'ar' ? 'الخضار والفواكه' : (lang === 'en' ? 'Vegetables & Fruits' : 'Légumes & fruits'), amount: '31,200 MAD', status: lang === 'ar' ? 'متأخر' : (lang === 'en' ? 'Delayed' : 'Retard'), sColor: '#ef4444', sBg: 'rgba(239,68,68,0.1)' },
-                      ].map((row, i) => (
-                        <tr key={i} style={{ borderBottom: i !== 3 ? `1px solid ${clr.cardBorder}` : 'none' }}>
-                          <td style={{ padding: '16px 0', fontSize: '13px', fontWeight: '600', color: '#0f766e', textAlign: isRtl ? 'right' : 'left' }}>{row.id}</td>
-                          <td style={{ padding: '16px 0', fontSize: '13px', color: clr.text, fontWeight: '500', textAlign: isRtl ? 'right' : 'left' }}>{row.vendor}</td>
-                          <td style={{ padding: '16px 0', fontSize: '13px', color: clr.textMuted, textAlign: isRtl ? 'right' : 'left' }}>{row.product}</td>
-                          <td style={{ padding: '16px 0', fontSize: '13px', fontWeight: '600', color: clr.text, textAlign: isRtl ? 'right' : 'left' }}>{row.amount}</td>
-                          <td style={{ padding: '16px 0', textAlign: isRtl ? 'right' : 'left' }}>
-                            <span style={{ backgroundColor: row.sBg, color: row.sColor, padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700' }}>
-                              {row.status}
-                            </span>
-                          </td>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ borderBottom: `1px solid ${clr.cardBorder}`, textAlign: isRtl ? 'right' : 'left', fontSize: '11px', color: clr.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          <th style={{ paddingBottom: '12px', fontWeight: '600' }}>{nt.orderNo}</th>
+                          <th style={{ paddingBottom: '12px', fontWeight: '600' }}>N° MARCHÉ</th>
+                          <th style={{ paddingBottom: '12px', fontWeight: '600' }}>{nt.supplier}</th>
+                          <th style={{ paddingBottom: '12px', fontWeight: '600' }}>{nt.amount}</th>
+                          <th style={{ paddingBottom: '12px', fontWeight: '600' }}>{nt.status}</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Alerts */}
-                <div style={{ backgroundColor: clr.card, borderRadius: '16px', padding: '24px', border: `1px solid ${clr.cardBorder}`, boxShadow: '0 1px 2px rgba(0,0,0,0.02)', transition: 'background-color 0.3s, border-color 0.3s' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                    <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: clr.text, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <AlertCircle size={18} color="#ef4444" />
-                      {nt.alerts}
-                    </h3>
-                    <div style={{ width: '20px', height: '20px', backgroundColor: '#ef4444', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 'bold' }}>3</div>
-                  </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {[
-                      {
-                        title: lang === 'ar' ? 'مخزون منخفض حرج' : (lang === 'en' ? 'Critical low stock' : 'Stock bas critique'),
-                        desc: lang === 'ar' ? 'لحوم الأغنام - متبقي يومان' : (lang === 'en' ? 'Mutton meat - 2 days remaining' : 'Viandes moutons - reste 2 jours'),
-                        icon: <AlertTriangle size={16} color="#ef4444" />, bg: 'rgba(239,68,68,0.1)', border: '#ef4444'
-                      },
-                      {
-                        title: lang === 'ar' ? 'تأخر تسليم M-2024-002' : (lang === 'en' ? 'Delayed delivery M-2024-002' : 'Livraison M-2024-002'),
-                        desc: lang === 'ar' ? 'تم الإبلاغ عن تأخير لمدة يومين' : (lang === 'en' ? '2 days delay reported' : 'Retard de 2 jours signalé'),
-                        icon: <Clock size={16} color="#f59e0b" />, bg: 'rgba(245,158,11,0.1)', border: '#f59e0b'
-                      },
-                      {
-                        title: lang === 'ar' ? 'فواتير بحاجة للتحقق' : (lang === 'en' ? 'Invoice to validate' : 'Facture à valider'),
-                        desc: 'DISMA Maroc - 124,000 MAD',
-                        icon: <FileText size={16} color="#3b82f6" />, bg: 'rgba(59,130,246,0.1)', border: '#3b82f6'
-                      },
-                    ].map((alert, i) => (
-                      <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px', backgroundColor: isDark ? '#1e293b' : '#f8fafc', borderRadius: '12px', borderLeft: `3px solid ${alert.border}`, borderRight: isRtl ? `3px solid ${alert.border}` : 'none', borderLeftColor: isRtl ? 'transparent' : alert.border }}>
-                        <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: alert.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          {alert.icon}
-                        </div>
-                        <div>
-                          <div style={{ fontSize: '13px', fontWeight: '600', color: clr.text, marginBottom: '2px' }}>{alert.title}</div>
-                          <div style={{ fontSize: '12px', color: clr.textMuted }}>{alert.desc}</div>
-                        </div>
-                      </div>
-                    ))}
+                      </thead>
+                      <tbody>
+                        {loadingStats ? (
+                          <tr><td colSpan="5" style={{ padding: '24px', textAlign: 'center', color: clr.textMuted }}>Chargement des commandes...</td></tr>
+                        ) : (!dashboardStats?.latest_orders || dashboardStats.latest_orders.length === 0) ? (
+                          <tr><td colSpan="5" style={{ padding: '24px', textAlign: 'center', color: clr.textMuted }}>Aucune commande récente</td></tr>
+                        ) : (
+                          dashboardStats.latest_orders.map((row, i) => (
+                            <tr key={i} style={{ borderBottom: i !== (dashboardStats.latest_orders.length - 1) ? `1px solid ${clr.cardBorder}` : 'none' }}>
+                              <td style={{ padding: '16px 0', fontSize: '13px', fontWeight: '600', color: '#0f766e', textAlign: isRtl ? 'right' : 'left' }}>{row.id}</td>
+                              <td style={{ padding: '16px 0', fontSize: '13px', color: clr.textMuted, textAlign: isRtl ? 'right' : 'left', maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.marche}</td>
+                              <td style={{ padding: '16px 0', fontSize: '13px', color: clr.text, fontWeight: '500', textAlign: isRtl ? 'right' : 'left' }}>{row.fournisseur}</td>
+                              <td style={{ padding: '16px 0', fontSize: '13px', fontWeight: '600', color: clr.text, textAlign: isRtl ? 'right' : 'left' }}>{row.montant.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD</td>
+                              <td style={{ padding: '16px 0', textAlign: isRtl ? 'right' : 'left' }}>
+                                <span style={{ 
+                                  backgroundColor: row.statut === 'Livré' || row.statut === 'Validé' ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)', 
+                                  color: row.statut === 'Livré' || row.statut === 'Validé' ? '#10b981' : '#f59e0b', 
+                                  padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700' 
+                                }}>
+                                  {row.statut}
+                                </span>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
 
