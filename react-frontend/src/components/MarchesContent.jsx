@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Plus, Filter, Folder, Calendar, DollarSign, Archive, FolderOpen,
-  ChevronLeft, FileText, Printer, Download, Edit2, Trash2, Eye, Search, X, Check, ChevronDown
+  ChevronLeft, FileText, Printer, Download, Edit2, Trash2, Eye, Search, X, Check, ChevronDown, Package
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import api from '../api/axios';
@@ -1697,13 +1697,7 @@ const MarchesContent = () => {
     if (activeDocTab === 'attachments') {
       const filteredAttachments = attachments.filter(a => selectedMarche && a.marche_id === selectedMarche.id);
       
-      // Group attachments by BL id
-      const grouped = {};
-      filteredAttachments.forEach(att => {
-          if(!grouped[att.bon_livraison_id]) grouped[att.bon_livraison_id] = { ...att, items: [] };
-          grouped[att.bon_livraison_id].items.push(att);
-      });
-      const attachmentGroups = Object.values(grouped);
+      const attachmentGroups = filteredAttachments;
 
       return (
         <div>
@@ -1714,26 +1708,42 @@ const MarchesContent = () => {
             <button
               onClick={() => {
                 setEditingAttachmentGroup(null);
-                const availableBls = providerBls;
-                const defaultBl = availableBls[0];
-                let newItems = [];
-                if (defaultBl) {
-                  const items = normalizeBlItems(defaultBl.items);
-                  newItems = items.map((item, idx) => ({
-                    numero_article: idx + 1,
-                    designation: item.designation || item.service_description || item.description || item.name || '',
-                    unite: item.unite || item.unit_of_measure || item.unit || 'U',
-                    quantite: item.qty || item.quantity || item.quantite || 1,
-                    taux_tva: item.vat_rate || item.taux_tva || 0
-                  }));
-                }
+                
+                const stockMap = {};
+                providerBls.forEach(bl => {
+                  (bl.items || []).forEach(item => {
+                    const designation = item.designation || item.service_description || item.description || item.name || '';
+                    if (!designation) return;
+                    
+                    if (!stockMap[designation]) {
+                      stockMap[designation] = {
+                        designation: designation,
+                        unite: item.unite || item.unit_of_measure || item.unit || 'U',
+                        quantite_initiale: 0
+                      };
+                    }
+                    stockMap[designation].quantite_initiale += parseFloat(item.qty || item.quantity || item.quantite || 0);
+                  });
+                });
+                
+                const newItems = Object.values(stockMap).map((item, idx) => ({
+                  numero_article: idx + 1,
+                  designation: item.designation,
+                  unite: item.unite,
+                  quantite_initiale: item.quantite_initiale,
+                  quantite: 0,
+                  taux_tva: 0
+                }));
+
                 setNewAttachmentData({
                   numero_attachment: attachments.length > 0 ? Math.max(...attachments.map(a => a.numero_attachment || 0)) + 1 : 1,
-                  bon_livraison_id: defaultBl?.id || '',
+                  bon_livraison_id: '',
+                  marche_id: selectedMarche ? selectedMarche.id : null,
+                  date_attachment: new Date().toISOString().split('T')[0],
                   budget: 'BF',
                   exercice: new Date().getFullYear(),
                   rubrique: 'ACHAT PRODUITS ALIMENTAIRES',
-                  reference_marche: '',
+                  reference_marche: selectedMarche ? selectedMarche.titulaire : '',
                   lieu_livraison: 'Ouarzazate',
                   items: newItems
                 });
@@ -1770,7 +1780,7 @@ const MarchesContent = () => {
                       <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
                         <td style={{ padding: '14px 8px', fontSize: '12px', color: '#64748b' }}>{idx + 1}</td>
                         <td style={{ padding: '14px 8px', fontSize: '13px', fontWeight: '600', color: '#0f172a' }}>
-                           {providerBls.find(b => b.id === group.bon_livraison_id)?.numeroBL || 'Inconnu'}
+                           {selectedMarche.titulaire}
                         </td>
                         <td style={{ padding: '14px 8px', fontSize: '12px', fontWeight: '700', color: '#0f766e' }}>
                           <span style={{ backgroundColor: '#ecfdf5', color: '#0f766e', padding: '4px 8px', borderRadius: '6px', fontSize: '11px' }}>
@@ -1784,15 +1794,45 @@ const MarchesContent = () => {
                           <button
                             onClick={() => {
                               setEditingAttachmentGroup(group);
+                              
+                              const stockMap = {};
+                              providerBls.forEach(bl => {
+                                (bl.items || []).forEach(item => {
+                                  const designation = item.designation || item.service_description || item.description || item.name || '';
+                                  if (!designation) return;
+                                  if (!stockMap[designation]) {
+                                    stockMap[designation] = {
+                                      designation: designation,
+                                      unite: item.unite || item.unit_of_measure || item.unit || 'U',
+                                      quantite_initiale: 0
+                                    };
+                                  }
+                                  stockMap[designation].quantite_initiale += parseFloat(item.qty || item.quantity || item.quantite || 0);
+                                });
+                              });
+
+                              let itemsArr = group.items;
+                              if (typeof itemsArr === 'string') {
+                                try { itemsArr = JSON.parse(itemsArr); } catch(e) { itemsArr = []; }
+                              } else if (!itemsArr) {
+                                itemsArr = [];
+                              }
+
+                              const mergedItems = itemsArr.map(item => ({
+                                ...item,
+                                quantite_initiale: stockMap[item.designation] ? stockMap[item.designation].quantite_initiale : 0
+                              }));
+
                               setNewAttachmentData({
                                 numero_attachment: group.numero_attachment,
-                                bon_livraison_id: group.bon_livraison_id,
+                                bon_livraison_id: '',
+                                marche_id: group.marche_id || selectedMarche.id,
                                 budget: group.budget,
                                 exercice: group.exercice,
                                 rubrique: group.rubrique,
                                 reference_marche: group.reference_marche || '',
                                 lieu_livraison: group.lieu_livraison,
-                                items: group.items
+                                items: mergedItems
                               });
                               setShowAttachmentModal(true);
                             }}
@@ -1806,9 +1846,7 @@ const MarchesContent = () => {
                           <button
                             onClick={async () => {
                                 if (window.confirm("Supprimer cet attachement ?")) {
-                                    for(const item of group.items) {
-                                        await api.delete(`/attachments-bc/${item.id}`);
-                                    }
+                                    await api.delete(`/attachments-bc/${group.id}`);
                                     fetchAttachments();
                                 }
                             }}
@@ -1822,11 +1860,11 @@ const MarchesContent = () => {
                           <button
                             onClick={async () => {
                                 try {
-                                    const res = await api.get(`/bons-livraison/${group.bon_livraison_id}/attachments-bc/export`, { responseType: 'blob' });
+                                    const res = await api.get(`/attachments-bc/${group.id}/export`, { responseType: 'blob' });
                                     const url = window.URL.createObjectURL(new Blob([res.data]));
                                     const link = document.createElement('a');
                                     link.href = url;
-                                    link.setAttribute('download', `Attachement_BC_${group.bon_livraison_id}.xlsx`);
+                                    link.setAttribute('download', `Attachement_${group.numero_attachment}_${group.exercice}.xlsx`);
                                     document.body.appendChild(link);
                                     link.click();
                                     link.parentNode.removeChild(link);
@@ -2190,6 +2228,71 @@ const MarchesContent = () => {
                             <Download size={14} />
                           </button>
                         </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (activeDocTab === 'stock') {
+      const filteredAttachments = attachments.filter(a => selectedMarche && a.marche_id === selectedMarche.id);
+      
+      const stockMap = {};
+      
+      providerBls.forEach(bl => {
+        (bl.items || []).forEach(item => {
+          const designation = item.designation || item.service_description || item.description || item.name || '';
+          if (!designation) return;
+          
+          if (!stockMap[designation]) {
+            stockMap[designation] = {
+              designation: designation,
+              unite: item.unite || item.unit_of_measure || item.unit || 'U',
+              quantite_initiale: 0
+            };
+          }
+          stockMap[designation].quantite_initiale += parseFloat(item.qty || item.quantity || item.quantite || 0);
+        });
+      });
+
+      const stockItems = Object.values(stockMap).sort((a, b) => a.designation.localeCompare(b.designation));
+
+      return (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Package size={20} color="#0f766e" /> Mouvement de Stock (Marché)
+            </h3>
+          </div>
+
+          <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
+            <div style={{ padding: '24px', fontFamily: "'Inter', sans-serif" }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid #cbd5e1', textAlign: 'left', backgroundColor: '#f8fafc' }}>
+                    <th style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '700', color: '#64748b' }}>DÉSIGNATION PRODUIT</th>
+                    <th style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '700', color: '#64748b', textAlign: 'center' }}>UNITÉ</th>
+                    <th style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '700', color: '#64748b', textAlign: 'center' }}>QUANTITÉ INITIALE (BL)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stockItems.length === 0 ? (
+                    <tr>
+                      <td colSpan="3" style={{ padding: '24px', textAlign: 'center', color: '#64748b', fontSize: '14px' }}>
+                        Aucun mouvement de stock pour ce marché.
+                      </td>
+                    </tr>
+                  ) : (
+                    stockItems.map((item, idx) => (
+                      <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background-color 0.1s' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                        <td style={{ padding: '14px 8px', fontSize: '13px', fontWeight: '600', color: '#0f172a' }}>{item.designation}</td>
+                        <td style={{ padding: '14px 8px', fontSize: '12px', color: '#64748b', textAlign: 'center' }}>{item.unite}</td>
+                        <td style={{ padding: '14px 8px', fontSize: '13px', fontWeight: '600', color: '#0ea5e9', textAlign: 'center' }}>{item.quantite_initiale}</td>
                       </tr>
                     ))
                   )}
@@ -4075,35 +4178,13 @@ const MarchesContent = () => {
             <div style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px', marginBottom: '32px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '8px' }}>Bon de Livraison *</label>
-                  <select
-                    value={newAttachmentData.bon_livraison_id}
-                    onChange={(e) => {
-                      const blId = e.target.value;
-                      const selectedBL = bls.find(b => b.id.toString() === blId);
-                      let newItems = [];
-                      if (selectedBL) {
-                        const items = normalizeBlItems(selectedBL.items);
-                        newItems = items.map((item, idx) => ({
-                          numero_article: idx + 1,
-                          designation: item.designation || item.service_description || item.description || item.name || '',
-                          unite: item.unite || item.unit_of_measure || item.unit || 'U',
-                          quantite: item.qty || item.quantity || item.quantite || 1,
-                          taux_tva: item.vat_rate || item.taux_tva || 0
-                        }));
-                      }
-                      setNewAttachmentData({ 
-                        ...newAttachmentData, 
-                        bon_livraison_id: blId, 
-                        items: newItems.length > 0 ? newItems : newAttachmentData.items 
-                      });
-                    }}
-                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none' }}
-                  >
-                    {providerBls.map(bl => (
-                        <option key={bl.id} value={bl.id}>{bl.numeroBL}</option>
-                    ))}
-                  </select>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '8px' }}>Marché Sélectionné</label>
+                  <input
+                    type="text"
+                    disabled
+                    value={selectedMarche ? selectedMarche.titulaire : ''}
+                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', backgroundColor: '#f1f5f9' }}
+                  />
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '8px' }}>N° Attachement *</label>
@@ -4163,8 +4244,8 @@ const MarchesContent = () => {
                       <th style={{ padding: '8px', textAlign: 'left', width: '50px' }}>N°</th>
                       <th style={{ padding: '8px', textAlign: 'left' }}>Désignation</th>
                       <th style={{ padding: '8px', textAlign: 'left', width: '80px' }}>Unité</th>
-                      <th style={{ padding: '8px', textAlign: 'left', width: '80px' }}>Qté</th>
-                      <th style={{ padding: '8px', textAlign: 'left', width: '80px' }}>TVA %</th>
+                      <th style={{ padding: '8px', textAlign: 'left', width: '100px' }}>Qté Initiale</th>
+                      <th style={{ padding: '8px', textAlign: 'left', width: '100px' }}>Qté Consommée</th>
                       <th style={{ padding: '8px', width: '40px' }}></th>
                     </tr>
                   </thead>
@@ -4193,16 +4274,12 @@ const MarchesContent = () => {
                           }} style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
                         </td>
                         <td style={{ padding: '12px' }}>
+                          <input type="number" disabled value={item.quantite_initiale || 0} style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '4px', backgroundColor: '#f1f5f9' }} />
+                        </td>
+                        <td style={{ padding: '12px' }}>
                           <input type="number" value={item.quantite} onChange={(e) => {
                             const newItems = [...newAttachmentData.items];
                             newItems[idx].quantite = e.target.value;
-                            setNewAttachmentData({ ...newAttachmentData, items: newItems });
-                          }} style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
-                        </td>
-                        <td style={{ padding: '12px' }}>
-                          <input type="number" value={item.taux_tva} onChange={(e) => {
-                            const newItems = [...newAttachmentData.items];
-                            newItems[idx].taux_tva = e.target.value;
                             setNewAttachmentData({ ...newAttachmentData, items: newItems });
                           }} style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
                         </td>

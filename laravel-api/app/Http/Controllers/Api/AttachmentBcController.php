@@ -72,13 +72,12 @@ class AttachmentBcController extends Controller
         return response()->json(['message' => 'Attachment supprimé avec succès']);
     }
 
-    public function export($bon_livraison_id)
+    public function export($id)
     {
-        $bl = BonLivraison::findOrFail($bon_livraison_id);
-        $attachment = AttachmentBc::where('bon_livraison_id', $bon_livraison_id)->first();
+        $attachment = AttachmentBc::findOrFail($id);
 
         if (!$attachment) {
-            return response()->json(['error' => 'Aucun attachement trouvé pour ce bon de livraison.'], 404);
+            return response()->json(['error' => 'Aucun attachement trouvé.'], 404);
         }
 
         $items = is_string($attachment->items) ? json_decode($attachment->items, true) : ($attachment->items ?? []);
@@ -178,8 +177,8 @@ class AttachmentBcController extends Controller
         $sheet->setCellValue('A12', 'N°');
         $sheet->setCellValue('B12', 'DESIGNATIONS ET REFERENCES');
         $sheet->setCellValue('C12', 'UNITE');
-        $sheet->setCellValue('D12', 'QTE');
-        $sheet->setCellValue('E12', 'Taux TVA');
+        $sheet->setCellValue('D12', 'QTE INITIALE');
+        $sheet->setCellValue('E12', 'QTE CONSOMMEE');
 
         $sheet->getStyle('A12:E12')->getFont()->setBold(true)->setSize(9);
         $sheet->getStyle('A12:E12')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
@@ -193,12 +192,9 @@ class AttachmentBcController extends Controller
             $sheet->setCellValue('A' . $currentRow, $item['numero_article'] ?? $item['price_number'] ?? '');
             $sheet->setCellValue('B' . $currentRow, $item['designation'] ?? $item['service_description'] ?? '');
             $sheet->setCellValue('C' . $currentRow, $item['unite'] ?? $item['unit_of_measure'] ?? 'U');
-            $sheet->setCellValue('D' . $currentRow, $item['quantite'] ?? $item['qty'] ?? 1);
+            $sheet->setCellValue('D' . $currentRow, $item['quantite_initiale'] ?? 0);
             
-            // Format TVA e.g., 20.00 -> 20%
-            $tva = $item['taux_tva'] ?? $item['vat_rate'] ?? 20;
-            $tvaFormatted = floatval($tva) . '%';
-            $sheet->setCellValue('E' . $currentRow, $tvaFormatted);
+            $sheet->setCellValue('E' . $currentRow, $item['quantite'] ?? $item['qty'] ?? 1);
 
             // Alignments
             $sheet->getStyle('A' . $currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
@@ -227,7 +223,7 @@ class AttachmentBcController extends Controller
         $sheet->getStyle('A12:E' . ($currentRow - 1))->getBorders()->getOutline()->setBorderStyle(Border::BORDER_THICK);
 
         $writer = new Xlsx($spreadsheet);
-        $filename = 'Attachement_BC_' . ($bl->numero_bl ?? $bl->id) . '.xlsx';
+        $filename = 'Attachement_' . ($attachment->numero_attachment ?? $attachment->id) . '_' . ($attachment->exercice ?? date('Y')) . '.xlsx';
 
         return response()->streamDownload(function () use ($writer) {
             $writer->save('php://output');
