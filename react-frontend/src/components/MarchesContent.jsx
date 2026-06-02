@@ -3071,7 +3071,25 @@ const MarchesContent = () => {
             backgroundColor: 'white', borderRadius: '16px', width: '100%', maxWidth: '500px',
             padding: '32px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)'
           }}>
-            <h2 style={{ margin: '0 0 24px 0', fontSize: '20px', color: '#0f172a' }}>Ajouter un nouveau marché</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <h2 style={{ margin: 0, fontSize: '20px', color: '#0f172a' }}>Ajouter un nouveau marché</h2>
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                style={{
+                  background: '#f1f5f9', border: 'none', borderRadius: '50%',
+                  width: '32px', height: '32px', display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', cursor: 'pointer', color: '#64748b',
+                  fontSize: '18px', fontWeight: 'bold', lineHeight: 1, flexShrink: 0,
+                  transition: 'background 0.2s'
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = '#e2e8f0'}
+                onMouseLeave={e => e.currentTarget.style.background = '#f1f5f9'}
+                title="Fermer"
+              >
+                ✕
+              </button>
+            </div>
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
@@ -3593,6 +3611,19 @@ const MarchesContent = () => {
                     style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155', boxSizing: 'border-box' }}
                     placeholder="Ex: gaz, pain, farine, etc."
                   />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Statut *</label>
+                  <select
+                    value={newBlData.statut || 'En cours'}
+                    onChange={(e) => setNewBlData({ ...newBlData, statut: e.target.value })}
+                    required
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155', boxSizing: 'border-box', backgroundColor: 'white' }}
+                  >
+                    <option value="En cours">En cours</option>
+                    <option value="Validé">Validé</option>
+                    <option value="Livré">Livré</option>
+                  </select>
                 </div>
               </div>
 

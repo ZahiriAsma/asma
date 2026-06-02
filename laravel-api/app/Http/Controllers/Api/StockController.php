@@ -20,6 +20,7 @@ class StockController extends Controller
      */
     private function computeConsumed(string $designation): float
     {
+
         return (float) TechnicalSheet::join('bordereau', 'technical_sheets.bordereau_id', '=', 'bordereau.id')
             ->whereRaw('LOWER(TRIM(bordereau.service_description)) = LOWER(TRIM(?))', [$designation])
             ->sum('technical_sheets.calculated_quantity');
@@ -131,6 +132,7 @@ class StockController extends Controller
 
     public function export(Request $request)
     {
+
         $startDate = $request->query('start_date', '2000-01-01');
         $endDate   = $request->query('end_date', date('Y-m-d'));
 

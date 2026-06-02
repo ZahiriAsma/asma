@@ -317,6 +317,7 @@ const StockContent = () => {
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
+
                 <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
                   {[
                     { label: '#', align: 'center', width: '48px' },
@@ -337,6 +338,7 @@ const StockContent = () => {
                       {col.label}
                     </th>
                   ))}
+
                 </tr>
               </thead>
               <tbody>
