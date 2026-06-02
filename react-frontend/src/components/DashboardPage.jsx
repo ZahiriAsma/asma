@@ -14,6 +14,49 @@ import StockContent from './StockContent';
 import { useDashboard } from '../context/DashboardContext';
 import api from '../api/axios';
 
+const CustomTooltip = ({ active, payload, label, isDark, clr }) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    return (
+      <div style={{ backgroundColor: clr.card, padding: '12px', border: `1px solid ${clr.cardBorder}`, borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', color: clr.text, fontSize: '12px' }}>
+        <p style={{ fontWeight: 'bold', marginBottom: '8px', borderBottom: `1px solid ${clr.cardBorder}`, paddingBottom: '4px', margin: '0 0 8px 0' }}>{data.name}</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
+            <span style={{ color: '#2563eb', fontWeight: '600' }}>Budget Total:</span>
+            <span>{(data.budget_total || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
+            <span style={{ color: '#10b981', fontWeight: '600' }}>Budget Consommé:</span>
+            <span>{(data.budget_consomme || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
+            <span style={{ color: '#f59e0b', fontWeight: '600' }}>Budget Restant:</span>
+            <span>{(data.budget_restant || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', marginTop: '4px', paddingTop: '4px', borderTop: `1px dotted ${clr.cardBorder}` }}>
+            <span style={{ fontWeight: '600' }}>Pourcentage Consommé:</span>
+            <span style={{ fontWeight: 'bold' }}>{data.pourcentage_consomme || 0} %</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
+const PieCustomTooltip = ({ active, payload, clr }) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    return (
+      <div style={{ backgroundColor: clr.card, padding: '8px 12px', border: `1px solid ${clr.cardBorder}`, borderRadius: '6px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', color: clr.text, fontSize: '12px' }}>
+        <span style={{ fontWeight: '600', marginRight: '8px' }}>{data.name} :</span>
+        <span>{(data.value || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD</span>
+      </div>
+    );
+  }
+  return null;
+};
+
 const DashboardPage = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [localSearchQuery, setLocalSearchQuery] = useState('');
@@ -204,7 +247,7 @@ const DashboardPage = () => {
     return `${days[now.getDay()]} ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
   };
 
-  const userInternat = currentUser.establishment || 'Internat OFPPT Casablanca';
+  const userInternat = currentUser.establishment || 'Internat OFPPT Ouarzazate';
 
   // Recharts Data
   const barData = [
@@ -763,7 +806,7 @@ const DashboardPage = () => {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                     <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: clr.text, display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <BarChart3 size={18} color="#0f766e" />
-                      {nt.monthlyConsumption}
+                      Consommation des Marchés
                     </h3>
                     <button style={{ backgroundColor: isDark ? '#334155' : '#f1f5f9', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: '600', color: isDark ? '#f1f5f9' : '#475569', cursor: 'pointer', transition: 'all 0.2s' }}>{nt.report}</button>
                   </div>
@@ -771,9 +814,9 @@ const DashboardPage = () => {
                     <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                       <BarChart data={dashboardStats?.marches_chart || []} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#334155' : '#f1f5f9'} />
-                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: isDark ? '#94a3b8' : '#94a3b8' }} dy={10} tickFormatter={(value) => value.length > 10 ? value.substring(0, 10) + '...' : value} />
-                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: isDark ? '#94a3b8' : '#94a3b8' }} />
-                        <Tooltip cursor={{ fill: isDark ? '#1e293b' : '#f8fafc' }} contentStyle={{ borderRadius: '8px', border: 'none', backgroundColor: clr.card, color: clr.text, boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }} />
+                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: isDark ? '#94a3b8' : '#94a3b8' }} dy={10} tickFormatter={(value) => value.length > 15 ? value.substring(0, 15) + '...' : value} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: isDark ? '#94a3b8' : '#94a3b8' }} tickFormatter={(value) => (value >= 1000 ? (value / 1000) + 'k' : value)} />
+                        <Tooltip content={<CustomTooltip isDark={isDark} clr={clr} />} cursor={{ fill: isDark ? '#1e293b' : '#f8fafc' }} />
                         <Bar dataKey="budget_total" fill="#2563eb" radius={[4, 4, 0, 0]} barSize={12} name="Budget Total" />
                         <Bar dataKey="budget_consomme" fill="#10b981" radius={[4, 4, 0, 0]} barSize={12} name="Budget Consommé" />
                       </BarChart>
@@ -786,7 +829,7 @@ const DashboardPage = () => {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                     <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: clr.text, display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <PieChartIcon size={18} color="#0f766e" />
-                      Répartition Marchés
+                      Répartition des Marchés
                     </h3>
                   </div>
                   {(() => {
@@ -804,19 +847,23 @@ const DashboardPage = () => {
                               <Pie data={dynamicPieData} cx="50%" cy="50%" innerRadius={50} outerRadius={70} paddingAngle={2} dataKey="value" stroke="none">
                                 {dynamicPieData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
                               </Pie>
+                              <Tooltip content={<PieCustomTooltip clr={clr} />} />
                             </RechartsPieChart>
                           </ResponsiveContainer>
-                          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
-                            <div style={{ fontSize: '18px', fontWeight: '800', color: clr.text }}>{total}</div>
-                            <div style={{ fontSize: '10px', color: clr.textMuted, fontWeight: '600' }}>Marchés</div>
+                          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', pointerEvents: 'none' }}>
+                            <div style={{ fontSize: '10px', color: clr.textMuted, fontWeight: '600', marginBottom: '2px' }}>Budget Total</div>
+                            <div style={{ fontSize: '13px', fontWeight: '800', color: clr.text, whiteSpace: 'nowrap' }}>
+                              {total.toLocaleString('fr-FR')} 
+                            </div>
+                            <div style={{ fontSize: '10px', fontWeight: '700', color: clr.textMuted }}>MAD</div>
                           </div>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px' }}>
                           {dynamicPieData.map((item, i) => (
                             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: clr.textMuted, fontWeight: '500' }}>
                               <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: item.color }}></div>
-                              <div style={{ flex: 1, textAlign: isRtl ? 'right' : 'left' }}>{item.name}</div>
-                              <div style={{ fontWeight: '700', color: clr.text }}>{total > 0 ? Math.round((item.value / total) * 100) : 0}%</div>
+                              <div style={{ flex: 1, textAlign: isRtl ? 'right' : 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</div>
+                              <div style={{ fontWeight: '700', color: clr.text }}>{item.pourcentage_global} %</div>
                             </div>
                           ))}
                           {dynamicPieData.length === 0 && <div style={{ textAlign: 'center', color: clr.textMuted, fontSize: '12px' }}>Aucun marché</div>}

@@ -27,7 +27,7 @@ class DashboardController extends Controller
 
             // 4. Budget Consommé RÉEL par marché = SUM(total_ttc) des BL Validés
             $blConsommes = BonLivraison::select('marche_id', DB::raw('SUM(total_ttc) as montant_consomme'))
-                ->where('statut', 'Validé')
+                ->where('statut', '!=', 'Annulé')
                 ->whereNotNull('marche_id')
                 ->groupBy('marche_id')
                 ->pluck('montant_consomme', 'marche_id');
@@ -54,30 +54,32 @@ class DashboardController extends Controller
                 }
             }
 
-            // 6. Graphique BarChart : Budget Total vs Budget Consommé (BL Validés) — 10 derniers marchés
-            $marchesChart = Marche::where('statut', '!=', 'Clôturé')
-                ->orderBy('created_at', 'desc')
-                ->take(10)
-                ->get()
-                ->map(function ($marche) use ($blConsommes) {
-                    return [
-                        'name'            => $marche->titulaire ?? 'Marché #' . $marche->id,
-                        'budget_total'    => (float) $marche->budget,
-                        'budget_consomme' => (float) ($blConsommes[$marche->id] ?? 0),
-                    ];
-                });
+            // 6 & 7. Statistiques des Marchés (Graphiques)
+            $allMarches = Marche::all();
+            $globalBudget = $allMarches->sum('budget');
 
-            // 7. Répartition des Marchés par statut (Donut Chart)
-            $marchesDistribution = Marche::select('statut', DB::raw('count(*) as total'))
-                ->groupBy('statut')
-                ->get()
-                ->map(function ($item) {
-                    return [
-                        'name'  => $item->statut ?: 'Autre',
-                        'value' => $item->total,
-                    ];
-                });
-            $totalMarchesForPie = $marchesDistribution->sum('value');
+            $marchesStats = $allMarches->map(function ($marche) use ($blConsommes, $globalBudget) {
+                $budgetTotal = (float) $marche->budget;
+                $budgetConsomme = (float) ($blConsommes[$marche->id] ?? 0);
+                $budgetRestant = max(0, $budgetTotal - $budgetConsomme);
+                
+                $pctConsomme = $budgetTotal > 0 ? round(($budgetConsomme / $budgetTotal) * 100, 2) : 0;
+                $pctGlobal = $globalBudget > 0 ? round(($budgetTotal / $globalBudget) * 100, 2) : 0;
+                
+                return [
+                    'name'                 => $marche->titulaire ?? 'Marché #' . $marche->id,
+                    'budget_total'         => $budgetTotal,
+                    'budget_consomme'      => $budgetConsomme,
+                    'budget_restant'       => $budgetRestant,
+                    'pourcentage_consomme' => $pctConsomme,
+                    'pourcentage_global'   => $pctGlobal,
+                    'value'                => $budgetTotal // Pour le PieChart
+                ];
+            })->sortByDesc('budget_total')->values();
+
+            $marchesChart = $marchesStats;
+            $marchesDistribution = $marchesStats;
+            $totalMarchesForPie = $globalBudget;
 
             // 8. Dernières Commandes (tableau du bas)
             $latestOrders = BonCommande::with(['marche', 'fournisseur'])
