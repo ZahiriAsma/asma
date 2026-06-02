@@ -89,8 +89,9 @@ class DashboardController extends Controller
                 });
             $totalMarchesForPie = $marchesDistribution->sum('value');
 
-            // 8. Dernières Commandes (tableau du bas)
+            // 8. Dernières Commandes (tableau du bas) — uniquement les vraies commandes liées à un marché
             $latestOrders = BonCommande::with(['marche', 'fournisseur'])
+                ->whereNotNull('marche_id')
                 ->orderBy('created_at', 'desc')
                 ->take(5)
                 ->get()
