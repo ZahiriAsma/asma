@@ -16,20 +16,7 @@ class StockController extends Controller
 {
     public function index()
     {
-        // Add any items that were used in Technical Sheets but don't exist in Stock yet
-        $consumedItems = TechnicalSheet::join('bordereau', 'technical_sheets.bordereau_id', '=', 'bordereau.id')
-            ->select('bordereau.service_description', 'bordereau.unit_of_measure')
-            ->distinct()
-            ->get();
-            
-        foreach ($consumedItems as $item) {
-            if (!empty($item->service_description)) {
-                Stock::firstOrCreate(
-                    ['designation' => $item->service_description],
-                    ['unite' => $item->unit_of_measure, 'quantite_initiale' => 0]
-                );
-            }
-        }
+
 
         $stocks = Stock::orderBy('designation', 'asc')->get()->map(function ($stock) {
             $consumed = TechnicalSheet::join('bordereau', 'technical_sheets.bordereau_id', '=', 'bordereau.id')
@@ -46,20 +33,7 @@ class StockController extends Controller
 
     public function export(Request $request)
     {
-        // Add any items that were used in Technical Sheets but don't exist in Stock yet
-        $consumedItems = TechnicalSheet::join('bordereau', 'technical_sheets.bordereau_id', '=', 'bordereau.id')
-            ->select('bordereau.service_description', 'bordereau.unit_of_measure')
-            ->distinct()
-            ->get();
-            
-        foreach ($consumedItems as $item) {
-            if (!empty($item->service_description)) {
-                Stock::firstOrCreate(
-                    ['designation' => $item->service_description],
-                    ['unite' => $item->unit_of_measure, 'quantite_initiale' => 0]
-                );
-            }
-        }
+
 
         $startDate = $request->query('start_date', '2000-01-01');
         $endDate = $request->query('end_date', date('Y-m-d'));

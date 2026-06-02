@@ -148,7 +148,7 @@ const StockContent = () => {
               <thead>
                 <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
                   <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Désignation Produit</th>
-                  <th style={{ padding: '16px', textAlign: 'center', fontSize: '12px', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Quantité Initiale (BL)</th>
+                  <th style={{ padding: '16px', textAlign: 'center', fontSize: '12px', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Quantité Disponible</th>
                   <th style={{ padding: '16px', textAlign: 'center', fontSize: '12px', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Unité</th>
                   <th style={{ padding: '16px', textAlign: 'center', fontSize: '12px', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Quantité Consommée</th>
                   <th style={{ padding: '16px', textAlign: 'center', fontSize: '12px', fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>Quantité Restante</th>

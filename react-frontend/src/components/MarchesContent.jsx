@@ -3557,6 +3557,19 @@ const MarchesContent = () => {
                     placeholder="Ex: gaz, pain, farine, etc."
                   />
                 </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Statut *</label>
+                  <select
+                    value={newBlData.statut || 'En cours'}
+                    onChange={(e) => setNewBlData({ ...newBlData, statut: e.target.value })}
+                    required
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155', boxSizing: 'border-box', backgroundColor: 'white' }}
+                  >
+                    <option value="En cours">En cours</option>
+                    <option value="Validé">Validé</option>
+                    <option value="Livré">Livré</option>
+                  </select>
+                </div>
               </div>
 
               {/* BC Selection - Multi-select drop-down with live search */}
