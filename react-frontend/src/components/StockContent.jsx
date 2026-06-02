@@ -383,19 +383,6 @@ const StockContent = () => {
                           <div style={{ fontWeight: '700', color: '#0f172a', fontSize: '14px' }}>
                             {stock.designation}
                           </div>
-                          {/* Consumption progress bar */}
-                          <div style={{ marginTop: '6px', width: '100%', maxWidth: '200px' }}>
-                            <div style={{ height: '4px', backgroundColor: '#f1f5f9', borderRadius: '2px', overflow: 'hidden' }}>
-                              <div style={{
-                                height: '100%', width: `${progressPct}%`,
-                                backgroundColor: isRupture ? '#ef4444' : isFaible ? '#f59e0b' : '#10b981',
-                                borderRadius: '2px', transition: 'width 0.4s ease',
-                              }} />
-                            </div>
-                            <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px', fontWeight: '500' }}>
-                              {progressPct.toFixed(0)}% restant
-                            </div>
-                          </div>
                         </td>
 
                         {/* Unité */}
@@ -478,7 +465,7 @@ const StockContent = () => {
               {stocks.length !== filteredStocks.length && ` sur ${stocks.length}`}
             </span>
             <span style={{ fontSize: '11px', color: '#94a3b8' }}>
-              🔄 Mise à jour automatique depuis Bons de Livraison & Fiches Techniques
+              Mise à jour automatique depuis Bons de Livraison & Fiches Techniques
             </span>
           </div>
         )}
