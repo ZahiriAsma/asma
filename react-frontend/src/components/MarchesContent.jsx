@@ -2468,7 +2468,8 @@ const MarchesContent = () => {
 
   const renderMarcheDetail = () => {
     const sName = fournisseurs.find(f => f.id === selectedMarche.id_fournisseur)?.raisonSociale || 'DISMA Maroc';
-
+    const consumedAmount = selectedMarche.consomme_amount || 0;
+    const progressPercent = selectedMarche.progress_percent || 0;
     return (
       <div style={{ fontFamily: "'Inter', sans-serif" }}>
 
@@ -2513,11 +2514,9 @@ const MarchesContent = () => {
               <button
                 className="btn-secondary"
                 onClick={() => {
-                  const consumed = providerBls.reduce((sum, bl) => sum + parseFloat(bl.montantTTC || 0), 0);
-                  const remaining = parseFloat(selectedMarche.budget || 0) - consumed;
-                  const progress = parseFloat(selectedMarche.budget || 1) > 0
-                    ? Math.min(100, (consumed / parseFloat(selectedMarche.budget)) * 100).toFixed(1)
-                    : '0.0';
+                  const consumed = consumedAmount;
+                  const remaining = Math.max(0, parseFloat(selectedMarche.budget || 0) - consumed);
+                  const progress = progressPercent;
                   const iframe = document.createElement('iframe');
                   iframe.style.position = 'absolute';
                   iframe.style.width = '0';
@@ -2624,23 +2623,23 @@ const MarchesContent = () => {
             <div>
               <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase', marginBottom: '4px' }}>Consommé</div>
               <div style={{ fontSize: '15px', fontWeight: '700', color: '#10b981' }}>
-                {providerBls.reduce((sum, bl) => sum + parseFloat(bl.montantTTC || 0), 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD
+                {consumedAmount.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD
               </div>
             </div>
             <div>
               <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase', marginBottom: '4px' }}>Restant</div>
               <div style={{ fontSize: '15px', fontWeight: '700', color: '#f59e0b' }}>
-                {(parseFloat(selectedMarche.budget || 0) - providerBls.reduce((sum, bl) => sum + parseFloat(bl.montantTTC || 0), 0)).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD
+                {(parseFloat(selectedMarche.budget || 0) - consumedAmount).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD
               </div>
             </div>
             <div>
               <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase', marginBottom: '4px' }}>Avancement</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
                 <div style={{ flex: 1, height: '6px', backgroundColor: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
-                  <div style={{ width: `${Math.min(100, parseFloat(selectedMarche.budget || 1) > 0 ? (providerBls.reduce((sum, bl) => sum + parseFloat(bl.montantTTC || 0), 0) / parseFloat(selectedMarche.budget)) * 100 : 0).toFixed(1)}%`, height: '100%', backgroundColor: '#0f766e', borderRadius: '3px' }}></div>
+                  <div style={{ width: `${progressPercent}%`, height: '100%', backgroundColor: '#0f766e', borderRadius: '3px' }}></div>
                 </div>
                 <span style={{ fontSize: '13px', fontWeight: '700', color: '#334155' }}>
-                  {parseFloat(selectedMarche.budget || 1) > 0 ? Math.min(100, ((providerBls.reduce((sum, bl) => sum + parseFloat(bl.montantTTC || 0), 0) / parseFloat(selectedMarche.budget)) * 100)).toFixed(1) : 0}%
+                  {progressPercent}%
                 </span>
               </div>
             </div>
@@ -2993,15 +2992,13 @@ const MarchesContent = () => {
                     </div>
 
                     {(() => {
-                      const consumed = bls.filter(bl => Number(bl.marche_id) === Number(marche.id))
-                        .reduce((sum, bl) => sum + parseFloat(bl.montantTTC || 0), 0);
-                      const budget = parseFloat(marche.budget || 0);
-                      const progress = budget > 0 ? Math.min(100, (consumed / budget) * 100) : 0;
+                      const consumed = marche.consomme_amount || 0;
+                      const progress = marche.progress_percent || 0;
                       return (
                         <div style={{ marginBottom: '20px' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: '600', marginBottom: '6px' }}>
                             <span style={{ color: '#64748b' }}>Consommé</span>
-                            <span style={{ color: '#0f766e' }}>{consumed.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} MAD ({progress.toFixed(1)}%)</span>
+                            <span style={{ color: '#0f766e' }}>{consumed.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} MAD ({progress}%)</span>
                           </div>
                           <div style={{ width: '100%', height: '6px', backgroundColor: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
                             <div style={{ width: `${progress}%`, height: '100%', backgroundColor: '#0f766e', borderRadius: '3px' }}></div>

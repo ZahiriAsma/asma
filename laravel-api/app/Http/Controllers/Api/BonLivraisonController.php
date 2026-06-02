@@ -13,9 +13,13 @@ use PhpOffice\PhpSpreadsheet\Style\Fill;
 
 class BonLivraisonController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return response()->json(BonLivraison::with('fournisseurModel')->orderBy('created_at', 'desc')->get());
+        $query = BonLivraison::with('fournisseurModel')->orderBy('created_at', 'desc');
+        if ($request->has('marche_id')) {
+            $query->where('marche_id', $request->query('marche_id'));
+        }
+        return response()->json($query->get());
     }
 
     public function store(Request $request)

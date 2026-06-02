@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, Lock, Eye, EyeOff, Loader2, LayoutDashboard, BarChart3, BellRing, ClipboardCheck, LogIn, X, ArrowLeft, Languages, Sun, Moon } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Loader2, LayoutDashboard, BarChart3, BellRing, ClipboardCheck, LogIn, X, ArrowLeft } from 'lucide-react';
 import api from '../api/axios';
 import logo from '../assets/logo.png';
 import cardBg from '../assets/login_bg.png';
@@ -270,44 +270,7 @@ const LoginPage = () => {
         <>
             {showForgot && <ForgotModal onClose={() => setShowForgot(false)} />}
 
-            {/* Floating Top Options Bar */}
-            <div style={{
-                position: 'absolute', top: '24px', [isRtl ? 'left' : 'right']: '24px',
-                zIndex: 100, display: 'flex', alignItems: 'center', gap: '12px',
-            }}>
-                {/* Language Switcher */}
-                <div style={{
-                    display: 'flex', alignItems: 'center', gap: '6px',
-                    background: 'rgba(10, 20, 35, 0.65)', border: '1px solid rgba(255,255,255,0.12)',
-                    padding: '6px 12px', borderRadius: '12px', backdropFilter: 'blur(10px)',
-                }}>
-                    <Languages size={15} color="#10b981" />
-                    <select
-                        value={lang}
-                        onChange={(e) => changeLanguage(e.target.value)}
-                        style={{
-                            background: 'none', border: 'none', color: '#ffffff',
-                            fontSize: '13px', fontWeight: '600', cursor: 'pointer', outline: 'none',
-                        }}
-                    >
-                        <option value="fr" style={{ background: '#0f172a', color: '#fff' }}>FR</option>
-                        <option value="ar" style={{ background: '#0f172a', color: '#fff' }}>AR</option>
-                        <option value="en" style={{ background: '#0f172a', color: '#fff' }}>EN</option>
-                    </select>
-                </div>
 
-                {/* Theme Switcher */}
-                <button
-                    onClick={toggleTheme}
-                    style={{
-                        background: 'rgba(10, 20, 35, 0.65)', border: '1px solid rgba(255,255,255,0.12)',
-                        padding: '8px', borderRadius: '12px', cursor: 'pointer', display: 'flex',
-                        alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(10px)',
-                    }}
-                >
-                    {isDark ? <Sun size={15} color="#eab308" /> : <Moon size={15} color="#94a3b8" />}
-                </button>
-            </div>
 
             {/* ── Full-screen warehouse background ── */}
             <div style={{

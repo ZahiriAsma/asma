@@ -5,7 +5,6 @@ import {
 } from 'lucide-react';
 import api from '../api/axios';
 import { useDashboard } from '../context/DashboardContext';
-import { analyzeMenuBudget, MENU_PRICE_LIMIT_DH } from '../utils/menuPrices';
 import FicheTechniqueModal from './FicheTechniqueModal';
 
 const formatDateISO = (date) => {
@@ -83,7 +82,7 @@ const parsePlats = (text) => {
 
 
 const MenusContent = () => {
-  const { checkMenuPrices, setShowNotifications, addNotification } = useDashboard();
+  const { setShowNotifications, addNotification } = useDashboard();
   const today = new Date();
   const todayIso = formatDateISO(today);
 
@@ -197,39 +196,6 @@ const MenusContent = () => {
       });
       const fetchedMenus = res.data;
       setMenus(fetchedMenus);
-
-      // Perform automatic background scan of the fetched week menus
-      fetchedMenus.forEach((menu) => {
-        const dateObj = new Date(menu.date);
-        const monthsFr = [
-          'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
-          'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'
-        ];
-        const daysFr = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
-        const dayLabel = `${daysFr[dateObj.getDay()]} ${dateObj.getDate()} ${monthsFr[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
-
-        // 1. Budget check (> 25 DH)
-        const budget = analyzeMenuBudget(menu);
-        if (budget.exceeds) {
-          let message;
-          if (budget.overItems.length > 0 && budget.total > MENU_PRICE_LIMIT_DH) {
-            message = `Le menu du ${dayLabel} : ${budget.overItems.length} article(s) > ${MENU_PRICE_LIMIT_DH} DH et total ${budget.total.toFixed(2)} DH/résident.`;
-          } else if (budget.overItems.length > 0) {
-            message = `Le menu du ${dayLabel} contient ${budget.overItems.length} article(s) au-delà de ${MENU_PRICE_LIMIT_DH} DH (${budget.overItems.map((i) => i.label).join(', ')}).`;
-          } else {
-            message = `Le menu du ${dayLabel} totalise ${budget.total.toFixed(2)} DH/résident (seuil : ${MENU_PRICE_LIMIT_DH} DH).`;
-          }
-          addNotification({
-            type: 'alert',
-            title: 'Dépassement budget',
-            message,
-            tab: 'menus',
-          });
-        }
-
-      });
-
-
     } catch (err) {
       console.error('Erreur lors de la récupération des menus:', err);
     } finally {
@@ -264,7 +230,6 @@ const MenusContent = () => {
     }
   };
 
-  const menuBudget = analyzeMenuBudget(editFormData);
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
@@ -275,9 +240,6 @@ const MenusContent = () => {
 
       setMenus((prev) => prev.map((m) => (m.id === selectedMenu.id ? res.data.menu : m)));
 
-      if (checkMenuPrices(editFormData, getSelectedDayFullText())) {
-        setShowNotifications(true);
-      }
 
       setIsEditModalOpen(false);
     } catch (err) {
@@ -603,10 +565,7 @@ const MenusContent = () => {
                       </div>
                     ))}
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', fontSize: '11px', fontWeight: '700', borderTop: '1px solid #f1f5f9', paddingTop: '10px' }}>
-                    <span style={{ color: '#94a3b8' }}>Résidents: <strong style={{ color: '#475569' }}>{selectedMenu.residents}</strong></span>
-                    <span style={{ color: '#059669' }}>Kcal: <strong>~{selectedMenu.kcal_pd}</strong></span>
-                  </div>
+
                 </div>
               </div>
 
@@ -652,10 +611,7 @@ const MenusContent = () => {
                       </div>
                     ))}
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', fontSize: '11px', fontWeight: '700', borderTop: '1px solid #f1f5f9', paddingTop: '10px' }}>
-                    <span style={{ color: '#94a3b8' }}>Résidents: <strong style={{ color: '#475569' }}>{selectedMenu.residents}</strong></span>
-                    <span style={{ color: '#059669' }}>Kcal: <strong>~{selectedMenu.kcal_dej}</strong></span>
-                  </div>
+
                 </div>
               </div>
 
@@ -701,10 +657,7 @@ const MenusContent = () => {
                       </div>
                     ))}
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', fontSize: '11px', fontWeight: '700', borderTop: '1px solid #f1f5f9', paddingTop: '10px' }}>
-                    <span style={{ color: '#94a3b8' }}>Résidents: <strong style={{ color: '#475569' }}>{selectedMenu.residents}</strong></span>
-                    <span style={{ color: '#059669' }}>Kcal: <strong>~{selectedMenu.kcal_din}</strong></span>
-                  </div>
+
                 </div>
               </div>
 

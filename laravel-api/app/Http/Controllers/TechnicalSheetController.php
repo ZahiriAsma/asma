@@ -6,6 +6,7 @@ use App\Models\TechnicalSheet;
 use App\Models\Bordereau;
 use App\Models\BordereauHeader;
 use Illuminate\Http\Request;
+use App\Services\NotificationService;
 
 class TechnicalSheetController extends Controller
 {
@@ -144,6 +145,13 @@ class TechnicalSheetController extends Controller
                 );
                 $saved[] = $sheet;
             }
+
+            $notificationService = new NotificationService();
+            foreach ($dates as $d) {
+                $notificationService->checkStockForTechnicalSheets($d);
+                $notificationService->checkDailyCost($d);
+            }
+
             return response()->json($saved);
         }
 
@@ -178,6 +186,10 @@ class TechnicalSheetController extends Controller
                 'amount' => $request->amount,
             ]
         );
+
+        $notificationService = new NotificationService();
+        $notificationService->checkStockForTechnicalSheets($request->date);
+        $notificationService->checkDailyCost($request->date);
 
         return response()->json($sheet);
     }

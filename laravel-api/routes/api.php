@@ -67,4 +67,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Dashboard Route
     Route::get('/dashboard/stats', [\App\Http\Controllers\Api\DashboardController::class, 'stats']);
+    // Reports Route
+    Route::get('/reports/stats', [\App\Http\Controllers\Api\ReportsController::class, 'stats']);
+
+    // Notifications Routes
+    Route::get('/notifications', [\App\Http\Controllers\Api\NotificationController::class, 'index']);
+    Route::put('/notifications/{id}/read', [\App\Http\Controllers\Api\NotificationController::class, 'markAsRead']);
+    Route::put('/notifications/read-all', [\App\Http\Controllers\Api\NotificationController::class, 'markAllAsRead']);
+    Route::delete('/notifications/{id}', [\App\Http\Controllers\Api\NotificationController::class, 'destroy']);
 });

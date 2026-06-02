@@ -455,7 +455,6 @@ const DashboardPage = () => {
           <NavItem id="bordereau" icon={FileSpreadsheet} label={nt.bordereau} />
 
           <NavGroup title={nt.analyse} />
-          <NavItem id="rapports" icon={BarChart3} label={nt.rapports} />
           <NavItem id="menus" icon={CalendarDays} label={nt.menus} />
 
           <NavGroup title={nt.systeme} />
@@ -957,25 +956,6 @@ const DashboardPage = () => {
             </div>
           )}
           {activeTab === 'stock' && <StockContent />}
-          {activeTab === 'rapports' && (
-            <div style={{ padding: '32px', textAlign: 'center', maxWidth: '600px', margin: '80px auto', fontFamily: isRtl ? "'Noto Sans Arabic', 'Segoe UI', sans-serif" : "'Inter', sans-serif" }}>
-              <div style={{ width: '80px', height: '80px', borderRadius: '50%', backgroundColor: 'rgba(59, 130, 246, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
-                <BarChart3 size={40} color="#3b82f6" />
-              </div>
-              <h2 style={{ fontSize: '20px', fontWeight: '700', color: clr.text, marginBottom: '8px' }}>{nt.reportsFinancials}</h2>
-              <p style={{ color: clr.textMuted, fontSize: '14px', lineHeight: '1.6', marginBottom: '24px' }}>
-                {nt.reportsFinancialsDesc}
-              </p>
-              <button 
-                onClick={() => setActiveTab('dashboard')}
-                style={{ padding: '10px 20px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', transition: 'background-color 0.2s' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3b82f6'}
-              >
-                {nt.backToDashboard}
-              </button>
-            </div>
-          )}
           {activeTab === 'marches' && <MarchesContent />}
           {activeTab === 'fournisseurs' && <FournisseursContent />}
           {activeTab === 'bordereau' && <BordereauContent />}

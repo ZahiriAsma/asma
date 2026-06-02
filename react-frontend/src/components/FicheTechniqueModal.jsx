@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { FileText, X, Trash2, Coffee, Utensils, Moon, Loader2, Search, Check, Filter, ChevronDown, Save, ShieldCheck, Landmark, Plus, Download } from 'lucide-react';
 import api from '../api/axios';
+import { useDashboard } from '../context/DashboardContext';
 
 // Helper: Extract plats from menu text
 const parsePlats = (text) => {
@@ -18,6 +19,7 @@ const MEAL_TYPES = [
 ];
 
 const FicheTechniqueModal = ({ selectedMenu, onClose, date, dayText }) => {
+  const { fetchNotifications } = useDashboard();
   const [globalIngredients, setGlobalIngredients] = useState([]);
   const [bordereauHeaders, setBordereauHeaders] = useState([]);
   
@@ -236,6 +238,7 @@ const FicheTechniqueModal = ({ selectedMenu, onClose, date, dayText }) => {
 
         setSheets(grouped);
         setSaveStatus('saved');
+        fetchNotifications();
       } catch (err) {
         console.error("Auto-save failed:", err);
         setSaveStatus('error');
