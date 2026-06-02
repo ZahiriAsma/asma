@@ -39,6 +39,8 @@ class BonLivraisonController extends Controller
             'statut' => 'nullable|string'
         ]);
 
+        $this->validateBcUniqueness($request->input('reference_bc'));
+
         // Secure automatic totals computation if not fully calculated on client-side
         if (!isset($validated['total_ht']) && is_array($request->input('items'))) {
             $ht = 0;
@@ -86,6 +88,8 @@ class BonLivraisonController extends Controller
             'marche_id' => 'nullable|exists:marches,id',
             'statut' => 'nullable|string'
         ]);
+
+        $this->validateBcUniqueness($request->input('reference_bc'), $id);
 
         if (!isset($validated['total_ht']) && is_array($request->input('items'))) {
             $ht = 0;
@@ -334,5 +338,32 @@ class BonLivraisonController extends Controller
     {
         // Stock is now dynamically computed in StockController
         // to guarantee perfect real-time synchronization.
+    }
+
+    protected function validateBcUniqueness($referenceBc, $ignoreBlId = null)
+    {
+        if (!$referenceBc) return;
+        
+        $bcsToLink = array_filter(array_map('trim', explode(',', $referenceBc)));
+        if (empty($bcsToLink)) return;
+
+        $query = BonLivraison::whereNotNull('reference_bc');
+        if ($ignoreBlId) {
+            $query->where('id', '!=', $ignoreBlId);
+        }
+        
+        $existingBls = $query->get(['reference_bc']);
+        $usedBcs = [];
+        foreach ($existingBls as $bl) {
+            $bcs = array_filter(array_map('trim', explode(',', $bl->reference_bc)));
+            $usedBcs = array_merge($usedBcs, $bcs);
+        }
+        
+        $intersection = array_intersect($bcsToLink, $usedBcs);
+        if (!empty($intersection)) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'reference_bc' => 'Les Bons de Commande suivants sont déjà associés à un autre Bon de Livraison : ' . implode(', ', $intersection)
+            ]);
+        }
     }
 }

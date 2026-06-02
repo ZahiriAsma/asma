@@ -3673,12 +3673,21 @@ const MarchesContent = () => {
                         />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        {providerBcs.length === 0 ? (
-                          <div style={{ padding: '12px', fontSize: '13px', color: '#64748b', textAlign: 'center' }}>
-                            Aucun Bon de Commande disponible pour ce marché.
-                          </div>
-                        ) : (
-                          providerBcs.map(bc => {
+                        {(() => {
+                          const usedBCs = bls
+                            .filter(bl => editingBl ? bl.id !== editingBl.id : true)
+                            .flatMap(bl => (bl.referenceBCs || (bl.reference_bc ? bl.reference_bc.split(',').map(s => s.trim()) : [])));
+                          const eligibleBcs = providerBcs.filter(bc => !usedBCs.includes(bc.numeroBC) || newBlData.referenceBCs.includes(bc.numeroBC));
+                          
+                          if (eligibleBcs.length === 0) {
+                            return (
+                              <div style={{ padding: '12px', fontSize: '13px', color: '#64748b', textAlign: 'center' }}>
+                                Aucun Bon de Commande disponible pour ce marché (tous sont déjà liés à un BL).
+                              </div>
+                            );
+                          }
+
+                          return eligibleBcs.map(bc => {
                             const isSelected = newBlData.referenceBCs.includes(bc.numeroBC);
                             return (
                               <div
@@ -3733,8 +3742,8 @@ const MarchesContent = () => {
                                 </div>
                               </div>
                             );
-                          })
-                        )}
+                          });
+                        })()}
                       </div>
                     </div>
                   )}

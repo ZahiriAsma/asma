@@ -13,9 +13,22 @@ use PhpOffice\PhpSpreadsheet\Style\Fill;
 
 class BonCommandeController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return response()->json(BonCommande::with('fournisseur')->get());
+        $query = BonCommande::with('fournisseur');
+        
+        if ($request->query('unlinked_only') == 'true') {
+            $usedBcs = \App\Models\BonLivraison::whereNotNull('reference_bc')->pluck('reference_bc')->toArray();
+            $usedBcNumbers = [];
+            foreach ($usedBcs as $ref) {
+                $usedBcNumbers = array_merge($usedBcNumbers, array_filter(array_map('trim', explode(',', $ref))));
+            }
+            if (!empty($usedBcNumbers)) {
+                $query->whereNotIn('numeroBC', array_unique($usedBcNumbers));
+            }
+        }
+        
+        return response()->json($query->get());
     }
 
     public function store(Request $request)
