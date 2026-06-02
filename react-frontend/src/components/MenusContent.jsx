@@ -72,45 +72,15 @@ const mealTextToItems = (mealText) => {
     .filter(Boolean);
 };
 
-/** Stocks indicatifs pour le tableau « Besoin total » (en attendant module inventaire) */
-const STOCK_INDICATIF = [
-  { keys: ['pain'], stock: 2200, unit: 'pcs' },
-  { keys: ['beurre'], stock: 15, unit: 'kg' },
-  { keys: ['fromage', 'kiri'], stock: 900, unit: 'portions' },
-  { keys: ['confiture'], stock: 20, unit: 'kg' },
-  { keys: ['lait', 'café au lait', 'petit lait'], stock: 96, unit: 'L' },
-  { keys: ['thé', 'tkhalte'], stock: 8, unit: 'kg' },
-  { keys: ['salade'], stock: 50, unit: 'kg' },
-  { keys: ['viande', 'bœuf', 'boeuf', 'boulette', 'viande hachée'], stock: 75, unit: 'kg' },
-  { keys: ['poulet', 'dinde', 'osso'], stock: 120, unit: 'kg' },
-  { keys: ['poisson', 'maquereau', 'thon'], stock: 65, unit: 'kg' },
-  { keys: ['riz'], stock: 100, unit: 'kg' },
-  { keys: ['lentille', 'haricot', 'semoule', 'couscous'], stock: 80, unit: 'kg' },
-  { keys: ['harira', 'soupe'], stock: 150, unit: 'L' },
-  { keys: ['fruit', 'orange', 'citron'], stock: 500, unit: 'pcs' },
-  { keys: ['œuf', 'oeuf'], stock: 800, unit: 'pcs' },
-  { keys: ['yaourt'], stock: 400, unit: 'pots' },
-  { keys: ['pâte', 'pate', 'spaghetti'], stock: 60, unit: 'kg' },
-  { keys: ['pois chiche', 'olive'], stock: 40, unit: 'kg' },
-  { keys: ['jus'], stock: 200, unit: 'L' },
-];
-
-const findStockForItem = (nameLower) => {
-  const entry = STOCK_INDICATIF.find(({ keys }) =>
-    keys.some((k) => nameLower.includes(k))
-  );
-  return entry || { stock: 500, unit: 'portions' };
+const parsePlats = (text) => {
+  if (!text) return [];
+  const parts = text.split(/[\n,+;]/).map(p => p.trim()).filter(p => p.length > 0);
+  return parts.map(p => {
+    return p.replace(/^(\d+\/\d+|\d+(?:[.,]\d+)?(?:ml|cl|L|kg|g)?)\s+/i, '').trim();
+  }).filter((value, index, self) => self.indexOf(value) === index);
 };
 
-const parseQtyValue = (qtyStr) => {
-  const s = qtyStr.toLowerCase().trim();
-  if (s.includes('/')) {
-    const [a, b] = s.split('/').map(Number);
-    return b ? a / b : 1;
-  }
-  const num = parseFloat(s.replace(/[^\d.,]/g, '').replace(',', '.'));
-  return Number.isFinite(num) && num > 0 ? num : 1;
-};
+
 
 const MenusContent = () => {
   const { checkMenuPrices, setShowNotifications, addNotification } = useDashboard();
@@ -139,21 +109,27 @@ const MenusContent = () => {
   const [saving, setSaving] = useState(false);
   const [showFicheTechnique, setShowFicheTechnique] = useState(false);
   const [dailyIngredients, setDailyIngredients] = useState([]);
+  const [dailyStocks, setDailyStocks] = useState([]);
 
   useEffect(() => {
-    const fetchDailySheets = async () => {
+    const fetchDailyData = async () => {
       try {
         const dateStr = daysInfo[selectedDayIndex]?.iso;
         if (!dateStr) return;
-        const res = await api.get(`/technical-sheets?date=${dateStr}`);
-        setDailyIngredients(res.data || []);
+        const [sheetsRes, stocksRes] = await Promise.all([
+          api.get(`/technical-sheets?date=${dateStr}`),
+          api.get('/stocks'),
+        ]);
+        setDailyIngredients(sheetsRes.data || []);
+        setDailyStocks(stocksRes.data || []);
       } catch (err) {
-        console.error("Error fetching daily sheets", err);
+        console.error('Error fetching daily data', err);
         setDailyIngredients([]);
+        setDailyStocks([]);
       }
     };
-    fetchDailySheets();
-  }, [selectedDayIndex, weekStart, showFicheTechnique]); // re-fetch when showFicheTechnique closes (might have updated)
+    fetchDailyData();
+  }, [selectedDayIndex, weekStart, showFicheTechnique]); // re-fetch when showFicheTechnique closes
 
   useEffect(() => {
     fetchMenus(weekStart);
@@ -206,56 +182,8 @@ const MenusContent = () => {
           });
         }
 
-        // 2. Stock check
-        const residents = menu.residents || 450;
-        const allItems = [
-          ...mealTextToItems(menu.petit_dejeuner),
-          ...mealTextToItems(menu.dejeuner),
-          ...mealTextToItems(menu.diner),
-        ];
-
-        const shortages = [];
-        const aggregated = new Map();
-        
-        allItems.forEach((item) => {
-          const key = item.name.toLowerCase();
-          const perPerson = parseQtyValue(item.qty);
-          if (aggregated.has(key)) {
-            const prev = aggregated.get(key);
-            aggregated.set(key, { ...prev, perPerson: prev.perPerson + perPerson });
-          } else {
-            aggregated.set(key, { name: item.name, perPerson });
-          }
-        });
-
-        Array.from(aggregated.values()).forEach(({ name, perPerson }) => {
-          const nameLower = name.toLowerCase();
-          const { stock: stockDispo, unit: stockUnit } = findStockForItem(nameLower);
-          const totalNeeded = Math.round(perPerson * residents);
-
-          let neededCompare = totalNeeded;
-          if (stockUnit === 'kg') {
-            neededCompare = totalNeeded / 100;
-          } else if (stockUnit === 'L') {
-            neededCompare = totalNeeded / 50;
-          }
-
-          if (neededCompare > stockDispo) {
-            const formatNeeded = stockUnit === 'kg' ? `${neededCompare.toFixed(1)} kg` : (stockUnit === 'L' ? `${neededCompare.toFixed(1)} L` : `${totalNeeded} pcs`);
-            const formatStock = `${stockDispo} ${stockUnit}`;
-            shortages.push(`${name} (Besoin: ${formatNeeded}, Stock: ${formatStock})`);
-          }
-        });
-
-        if (shortages.length > 0) {
-          addNotification({
-            type: 'warning',
-            title: 'Alerte Stock Insuffisant',
-            message: `Le menu du ${dayLabel} nécessite plus de stock que disponible pour : ${shortages.join(', ')}.`,
-            tab: 'menus'
-          });
-        }
       });
+
 
     } catch (err) {
       console.error('Erreur lors de la récupération des menus:', err);
@@ -306,57 +234,6 @@ const MenusContent = () => {
         setShowNotifications(true);
       }
 
-      // Check stock shortages for the newly submitted menu ingredients
-      const residents = editFormData.residents || 450;
-      const allItems = [
-        ...mealTextToItems(editFormData.petit_dejeuner),
-        ...mealTextToItems(editFormData.dejeuner),
-        ...mealTextToItems(editFormData.diner),
-      ];
-
-      const shortages = [];
-      const aggregated = new Map();
-      
-      allItems.forEach((item) => {
-        const key = item.name.toLowerCase();
-        const perPerson = parseQtyValue(item.qty);
-        if (aggregated.has(key)) {
-          const prev = aggregated.get(key);
-          aggregated.set(key, { ...prev, perPerson: prev.perPerson + perPerson });
-        } else {
-          aggregated.set(key, { name: item.name, perPerson });
-        }
-      });
-
-      Array.from(aggregated.values()).forEach(({ name, perPerson }) => {
-        const nameLower = name.toLowerCase();
-        const { stock: stockDispo, unit: stockUnit } = findStockForItem(nameLower);
-        const totalNeeded = Math.round(perPerson * residents);
-
-        let neededCompare = totalNeeded;
-        if (stockUnit === 'kg') {
-          neededCompare = totalNeeded / 100;
-        } else if (stockUnit === 'L') {
-          neededCompare = totalNeeded / 50;
-        }
-
-        if (neededCompare > stockDispo) {
-          const formatNeeded = stockUnit === 'kg' ? `${neededCompare.toFixed(1)} kg` : (stockUnit === 'L' ? `${neededCompare.toFixed(1)} L` : `${totalNeeded} pcs`);
-          const formatStock = `${stockDispo} ${stockUnit}`;
-          shortages.push(`${name} (Besoin: ${formatNeeded}, Stock: ${formatStock})`);
-        }
-      });
-
-      if (shortages.length > 0) {
-        addNotification({
-          type: 'warning',
-          title: 'Alerte Stock Insuffisant',
-          message: `Le menu du ${getSelectedDayFullText()} nécessite plus de stock que disponible pour : ${shortages.join(', ')}.`,
-          tab: 'menus'
-        });
-        setShowNotifications(true);
-      }
-
       setIsEditModalOpen(false);
     } catch (err) {
       console.error('Erreur lors de la mise à jour du menu:', err);
@@ -368,93 +245,67 @@ const MenusContent = () => {
 
   const getMealItems = (mealText) => mealTextToItems(mealText);
 
+  // Returns hierarchical structure: array of meal sections,
+  // each containing dishes, each containing ingredients with stock info.
   const getIngredientNeeds = () => {
-    // Si nous avons des fiches techniques réelles pour ce jour, on les utilise
-    if (dailyIngredients && dailyIngredients.length > 0) {
-      const aggregated = new Map();
-      
-      dailyIngredients.forEach((sheet) => {
-        const platName = sheet.plat_name || 'Autre';
-        
-        if (aggregated.has(platName)) {
-          const prev = aggregated.get(platName);
-          aggregated.set(platName, {
-            ...prev,
-            calculated_quantity: prev.calculated_quantity + Number(sheet.calculated_quantity)
-          });
-        } else {
-          aggregated.set(platName, {
-            name: `Plat: ${platName}`,
-            calculated_quantity: Number(sheet.calculated_quantity)
-          });
-        }
-      });
+    const MEAL_LABELS = {
+      breakfast: { label: 'Petit-déjeuner', color: '#d97706', bg: '#fef3c7', border: '#fde68a' },
+      lunch:     { label: 'Déjeuner',       color: '#0284c7', bg: '#e0f2fe', border: '#bae6fd' },
+      dinner:    { label: 'Dîner',           color: '#7c3aed', bg: '#f3e8ff', border: '#ddd6fe' },
+    };
 
-      return Array.from(aggregated.values()).map((plat) => {
-        const totalNeeded = plat.calculated_quantity;
-        const displayRaw = `${totalNeeded.toFixed(2)}`; // Pas d'unité fixe car c'est une somme mixte
-        
-        return {
-          name: plat.name,
-          raw: displayRaw,
-          stock: '—',
-          order: '—',
-          status: 'OK',
-        };
-      });
+    if (!dailyIngredients || dailyIngredients.length === 0) {
+      return null; // signals "no technical sheets yet"
     }
 
-    // Fallback: Si aucune fiche technique n'existe, on parse le texte du menu (ancien comportement)
-    if (!selectedMenu) return [];
-    const residents = selectedMenu.residents || 450;
+    const parsedPlats = {
+      breakfast: parsePlats(selectedMenu?.petit_dejeuner),
+      lunch: parsePlats(selectedMenu?.dejeuner),
+      dinner: parsePlats(selectedMenu?.diner)
+    };
 
-    const allItems = [
-      ...mealTextToItems(selectedMenu.petit_dejeuner),
-      ...mealTextToItems(selectedMenu.dejeuner),
-      ...mealTextToItems(selectedMenu.diner),
-    ];
+    // Group sheets: meal → dish → [ingredients]
+    const byMeal = {};
+    dailyIngredients.forEach((sheet) => {
+      const meal = sheet.meal_type || 'lunch';
+      const plat = sheet.plat_name || 'Autre';
 
-    const aggregated = new Map();
-    allItems.forEach((item) => {
-      const key = item.name.toLowerCase();
-      const perPerson = parseQtyValue(item.qty);
-      if (aggregated.has(key)) {
-        const prev = aggregated.get(key);
-        aggregated.set(key, { ...prev, perPerson: prev.perPerson + perPerson });
-      } else {
-        aggregated.set(key, { name: item.name, perPerson });
-      }
+      // Only show ingredients for dishes that exist in today's menu
+      const menuPlatsForMeal = parsedPlats[meal] || [];
+      if (!menuPlatsForMeal.includes(plat)) return;
+
+      if (!byMeal[meal]) byMeal[meal] = {};
+      if (!byMeal[meal][plat]) byMeal[meal][plat] = [];
+
+      const stockEntry = dailyStocks.find(
+        (s) => s.designation?.toLowerCase() === sheet.bordereau?.service_description?.toLowerCase()
+      );
+
+      const grossReq   = Number(sheet.calculated_quantity || 0);
+      const stockQty   = stockEntry ? Number(stockEntry.quantite_restante || 0) : null;
+      const isShortage = stockQty !== null && stockQty < grossReq;
+
+      byMeal[meal][plat].push({
+        name:      sheet.bordereau?.service_description || '—',
+        unit:      sheet.bordereau?.unit_of_measure || '',
+        grossReq,
+        stockQty,
+        isShortage,
+      });
     });
 
-    return Array.from(aggregated.values()).map(({ name, perPerson }) => {
-      const nameLower = name.toLowerCase();
-      const { stock: stockDispo, unit: stockUnit } = findStockForItem(nameLower);
-      const totalNeeded = Math.round(perPerson * residents);
-
-      let displayRaw = `${totalNeeded.toLocaleString('fr-FR')} ${stockUnit}`;
-      let displayStock = `${stockDispo.toLocaleString('fr-FR')} ${stockUnit}`;
-      let neededCompare = totalNeeded;
-      let stockCompare = stockDispo;
-
-      if (stockUnit === 'kg') {
-        displayRaw = `${(totalNeeded / 100).toFixed(1)} kg`;
-        neededCompare = totalNeeded / 100;
-      } else if (stockUnit === 'L') {
-        displayRaw = `${(totalNeeded / 50).toFixed(1)} L`;
-        neededCompare = totalNeeded / 50;
-      }
-
-      const isShortage = neededCompare > stockCompare;
-      return {
-        name,
-        raw: displayRaw,
-        stock: displayStock,
-        order: isShortage
-          ? `${Math.ceil(neededCompare - stockCompare).toLocaleString('fr-FR')} ${stockUnit}`
-          : '—',
-        status: isShortage ? 'Manque' : 'OK',
-      };
-    });
+    // Build ordered array of meal sections
+    const ORDER = ['breakfast', 'lunch', 'dinner'];
+    return ORDER
+      .filter((m) => byMeal[m])
+      .map((mealKey) => {
+        const meta   = MEAL_LABELS[mealKey] || { label: mealKey, color: '#64748b', bg: '#f8fafc', border: '#e2e8f0' };
+        const dishes = Object.entries(byMeal[mealKey]).map(([dishName, ingredients]) => {
+          const totalReq = ingredients.reduce((s, i) => s + i.grossReq, 0);
+          return { dishName, ingredients, totalReq };
+        });
+        return { mealKey, ...meta, dishes };
+      });
   };
 
   const getSelectedDayFullText = () => {
@@ -831,7 +682,7 @@ const MenusContent = () => {
                   <ul className="print-meal-list">{renderPrintMealList(menu.dejeuner)}</ul>
                   <p className="print-meal-title">Dîner ({menu.time_din})</p>
                   <ul className="print-meal-list">{renderPrintMealList(menu.diner)}</ul>
-                  <p style={{ margin: '8px 0 0', fontSize: '10px', color: '#64748b' }}>
+                <p style={{ margin: '8px 0 0', fontSize: '10px', color: '#64748b' }}>
                     Résidents : {menu.residents} · Kcal : ~{menu.kcal_pd} / ~{menu.kcal_dej} / ~{menu.kcal_din}
                   </p>
                 </>
@@ -844,10 +695,10 @@ const MenusContent = () => {
       </div>
 
       {/* ── Besoin total (écran uniquement) ── */}
-      <div className="no-print" style={{ 
-        backgroundColor: 'white', borderRadius: '16px', 
-        padding: '24px', border: '1px solid #e2e8f0', 
-        boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05)' 
+      <div className="no-print" style={{
+        backgroundColor: 'white', borderRadius: '16px',
+        padding: '24px', border: '1px solid #e2e8f0',
+        boxShadow: '0 1px 3px 0 rgba(0,0,0,0.05)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
           <FileText size={20} color="#0f766e" />
@@ -856,50 +707,104 @@ const MenusContent = () => {
           </h3>
         </div>
 
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ borderBottom: '1px solid #e2e8f0', textAlign: 'left', fontSize: '11px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              <th style={{ paddingBottom: '12px', fontWeight: '700' }}>PRODUIT</th>
-              <th style={{ paddingBottom: '12px', fontWeight: '700' }}>BESOIN BRUT</th>
-              <th style={{ paddingBottom: '12px', fontWeight: '700' }}>STOCK DISPO</th>
-              <th style={{ paddingBottom: '12px', fontWeight: '700' }}>À COMMANDER</th>
-              <th style={{ paddingBottom: '12px', fontWeight: '700' }}>STATUT</th>
-            </tr>
-          </thead>
-          <tbody>
-            {getIngredientNeeds().map((row, i) => {
-              const isShortage = row.status === 'Manque';
-              return (
-                <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={{ padding: '16px 0', fontSize: '13px', fontWeight: '600', color: '#1e293b' }}>
-                    {row.name}
-                  </td>
-                  <td style={{ padding: '16px 0', fontSize: '13px', color: '#475569', fontWeight: '500' }}>
-                    {row.raw}
-                  </td>
-                  <td style={{ padding: '16px 0', fontSize: '13px', fontWeight: '600', color: isShortage ? '#ea580c' : '#10b981' }}>
-                    {row.stock}
-                  </td>
-                  <td style={{ padding: '16px 0', fontSize: '13px', fontWeight: '700', color: isShortage ? '#ef4444' : '#64748b' }}>
-                    {row.order}
-                  </td>
-                  <td style={{ padding: '16px 0' }}>
-                    <span style={{ 
-                      backgroundColor: isShortage ? '#fef2f2' : '#ecfdf5', 
-                      color: isShortage ? '#ef4444' : '#10b981', 
-                      padding: '4px 10px', borderRadius: '20px', 
-                      fontSize: '11px', fontWeight: '700',
-                      display: 'inline-flex', alignItems: 'center', gap: '4px'
-                    }}>
-                      {isShortage ? <AlertTriangle size={12} /> : <CheckCircle2 size={12} />}
-                      {row.status}
-                    </span>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        {(() => {
+          const mealSections = getIngredientNeeds();
+
+          if (mealSections === null) {
+            return (
+              <div style={{
+                padding: '32px', textAlign: 'center',
+                border: '2px dashed #e2e8f0', borderRadius: '12px',
+                color: '#94a3b8', fontSize: '14px'
+              }}>
+                <FileText size={32} color="#cbd5e1" style={{ marginBottom: '12px' }} />
+                <p style={{ margin: '0 0 8px', fontWeight: '600', color: '#64748b' }}>
+                  Aucune fiche technique pour ce jour.
+                </p>
+                <p style={{ margin: 0, fontSize: '13px' }}>
+                  Cliquez sur <strong>Fiche Technique</strong> ci-dessus pour saisir les ingrédients par plat.
+                </p>
+              </div>
+            );
+          }
+
+          return (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '700', color: '#475569', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Plat / Ingrédient</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: '700', color: '#475569', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Besoin Brut</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: '700', color: '#475569', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Stock Disponible</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: '700', color: '#475569', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Statut</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {mealSections.map((meal) =>
+                    meal.dishes.map((dish) => (
+                      <React.Fragment key={`${meal.mealKey}-${dish.dishName}`}>
+                        <tr style={{ backgroundColor: '#f1f5f9' }}>
+                          <td colSpan={4} style={{
+                            padding: '10px 16px', fontWeight: '700', fontSize: '13px',
+                            color: '#1e293b', borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0'
+                          }}>
+                            <span style={{ color: '#64748b', fontWeight: '500', marginRight: '6px', fontSize: '12px' }}>
+                              {meal.label} ·
+                            </span>
+                            {dish.dishName}
+                            <span style={{ marginLeft: '12px', fontSize: '12px', fontWeight: '500', color: '#0f766e' }}>
+                              (Total : {dish.totalReq.toFixed(2)})
+                            </span>
+                          </td>
+                        </tr>
+                        {dish.ingredients.map((ing, idx) => (
+                          <tr key={idx} style={{
+                            borderBottom: '1px solid #f1f5f9',
+                            backgroundColor: ing.isShortage ? '#fff8f8' : 'white'
+                          }}>
+                            <td style={{ padding: '11px 16px 11px 32px', color: '#334155', fontWeight: '500' }}>
+                              {ing.name}
+                            </td>
+                            <td style={{ padding: '11px 16px', textAlign: 'center', color: '#1e293b', fontWeight: '600' }}>
+                              {ing.grossReq.toFixed(2)} {ing.unit}
+                            </td>
+                            <td style={{
+                              padding: '11px 16px', textAlign: 'center', fontWeight: '600',
+                              color: ing.stockQty === null ? '#94a3b8' : ing.isShortage ? '#dc2626' : '#16a34a'
+                            }}>
+                              {ing.stockQty === null ? '—' : `${Number(ing.stockQty).toFixed(2)} ${ing.unit}`}
+                            </td>
+                            <td style={{ padding: '11px 16px', textAlign: 'center' }}>
+                              {ing.stockQty === null ? (
+                                <span style={{ color: '#94a3b8', fontSize: '12px' }}>Non suivi</span>
+                              ) : ing.isShortage ? (
+                                <span style={{
+                                  display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                  backgroundColor: '#fef2f2', color: '#dc2626',
+                                  padding: '2px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600'
+                                }}>
+                                  <AlertTriangle size={11} /> Manque
+                                </span>
+                              ) : (
+                                <span style={{
+                                  display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                  backgroundColor: '#f0fdf4', color: '#16a34a',
+                                  padding: '2px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600'
+                                }}>
+                                  <CheckCircle2 size={11} /> OK
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </React.Fragment>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          );
+        })()}
       </div>
 
     </div>

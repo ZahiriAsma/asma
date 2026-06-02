@@ -42,6 +42,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/bons-livraison/{id}/attachments-bc/export', [\App\Http\Controllers\Api\AttachmentBcController::class, 'export']);
     Route::apiResource('attachments-bc', \App\Http\Controllers\Api\AttachmentBcController::class);
 
+    // PV Reception routes
+    Route::get('/pv-receptions/{id}/export', [\App\Http\Controllers\Api\PvReceptionController::class, 'export']);
+    Route::apiResource('pv-receptions', \App\Http\Controllers\Api\PvReceptionController::class);
+
+    // PV Conformité routes
+    Route::get('/pv-receptions/{id}/conformites', [\App\Http\Controllers\Api\PvConformiteController::class, 'index']);
+    Route::post('/pv-receptions/{id}/conformites/generate', [\App\Http\Controllers\Api\PvConformiteController::class, 'generate']);
+    Route::put('/pv-receptions/{id}/conformites', [\App\Http\Controllers\Api\PvConformiteController::class, 'update']);
+    Route::delete('/pv-receptions/{id}/conformites', [\App\Http\Controllers\Api\PvConformiteController::class, 'destroy']);
+    Route::get('/pv-receptions/{id}/conformites/export', [\App\Http\Controllers\Api\PvConformiteController::class, 'export']);
+
     // Technical Sheets routes
     Route::get('/technical-sheets', [\App\Http\Controllers\TechnicalSheetController::class, 'index']);
     Route::post('/technical-sheets', [\App\Http\Controllers\TechnicalSheetController::class, 'store']);

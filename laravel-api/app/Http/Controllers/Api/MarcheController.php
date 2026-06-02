@@ -10,9 +10,9 @@ class MarcheController extends Controller
 {
     public function index()
     {
-        // Auto-archive logic
+        // Auto-archive only markets expired more than 3 years ago
         Marche::where('is_archived', false)
-            ->whereDate('date_fin', '<', now())
+            ->whereDate('date_fin', '<', now()->subYears(3))
             ->update([
                 'is_archived' => true,
                 'archived_at' => now(),

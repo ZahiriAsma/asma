@@ -103,7 +103,11 @@ const FicheTechniqueModal = ({ selectedMenu, onClose, date, dayText }) => {
 
           loadedSheets.forEach(sheet => {
             const meal = sheet.meal_type;
-            const plat = sheet.plat_name || 'Autre'; // fallback if no plat
+            const plat = sheet.plat_name || 'Autre';
+
+            // Only load ingredients for dishes that exist in today's menu
+            const menuPlatsForMeal = parsedPlats[meal] || [];
+            if (!menuPlatsForMeal.includes(plat)) return;
 
             if (!grouped[meal]) grouped[meal] = {};
             if (!grouped[meal][plat]) grouped[meal][plat] = [];

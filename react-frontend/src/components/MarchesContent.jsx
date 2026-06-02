@@ -217,6 +217,24 @@ const MarchesContent = () => {
   const [editingFacture, setEditingFacture] = useState(null);
   const [selectedFactureForView, setSelectedFactureForView] = useState(null);
 
+  // --- PV de Reception State ---
+  const [pvs, setPvs] = useState([]);
+  const [showPvModal, setShowPvModal] = useState(false);
+  const [newPvData, setNewPvData] = useState({
+    bon_livraison_id: '',
+    marche_id: '',
+    date_reception: new Date().toISOString().split('T')[0],
+    commissions: []
+  });
+  const [editingPv, setEditingPv] = useState(null);
+
+  // --- PV de Conformité State ---
+  const [showConformiteModal, setShowConformiteModal] = useState(false);
+  const [newConformiteData, setNewConformiteData] = useState({
+    pv_reception_id: '',
+    conformites: []
+  });
+  const [editingConformite, setEditingConformite] = useState(null);
   const normalizeBlItems = (items) => {
     let itemsArray = [];
     if (items) {
@@ -287,15 +305,76 @@ const MarchesContent = () => {
     }
   };
 
+  const fetchPvs = async () => {
+    try {
+      const response = await api.get('/pv-receptions');
+      setPvs(response.data);
+    } catch (error) {
+      console.error('Erreur chargement PVs', error);
+    }
+  };
+
+  const handleUpdatePvCommission = (index, field, value) => {
+    const updated = [...newPvData.commissions];
+    updated[index][field] = value;
+    setNewPvData({ ...newPvData, commissions: updated });
+  };
+
+  const handleCommissionNameChange = (index, value) => {
+    const updated = [...newPvData.commissions];
+    updated[index].nom_prenom = value;
+    
+    // Auto-fill logic based on existing PVs
+    const existingMember = pvs.flatMap(p => p.commissions || []).find(c => c.nom_prenom === value);
+    if (existingMember) {
+        updated[index].fonction = existingMember.fonction;
+        updated[index].role = existingMember.role;
+    }
+    
+    setNewPvData({ ...newPvData, commissions: updated });
+  };
+
+  const handleAddPvCommission = () => {
+    setNewPvData({
+      ...newPvData,
+      commissions: [...newPvData.commissions, { nom_prenom: '', fonction: '', role: 'Membre' }]
+    });
+  };
+
+  const handleRemovePvCommission = (index) => {
+    const updated = newPvData.commissions.filter((_, i) => i !== index);
+    setNewPvData({ ...newPvData, commissions: updated });
+  };
+
+  const handleSubmitPv = async (e) => {
+    e.preventDefault();
+    try {
+      if (editingPv) {
+        await api.put(`/pv-receptions/${editingPv.id}`, newPvData);
+        alert('PV mis à jour avec succès');
+      } else {
+        await api.post('/pv-receptions', newPvData);
+        alert('PV créé avec succès');
+      }
+      setShowPvModal(false);
+      setEditingPv(null);
+      fetchPvs();
+    } catch (error) {
+      console.error('Erreur', error);
+      alert('Erreur lors de l\'enregistrement du PV');
+    }
+  };
+
   useEffect(() => {
+    fetchMarches(); // Will set loading to false as soon as it finishes
     fetchAttachments();
-    fetchMarches();
     fetchFournisseurs();
     fetchBcs();
     fetchFactures();
     fetchBordereauItems();
     fetchBordereauHeaders();
     fetchBls();
+    fetchPvs();
   }, []);
 
   const fetchBls = async () => {
@@ -334,7 +413,6 @@ const MarchesContent = () => {
     try {
       const response = await api.get('/marches');
       setMarches(response.data);
-      
       setLoading(false);
     } catch (error) {
       console.error('Erreur de chargement', error.response || error);
@@ -468,9 +546,9 @@ const MarchesContent = () => {
   // --- ISOLATION LOGIC ---
   const associatedBordereauHeader = selectedMarche ? bordereauHeaders.find(b => b.market_name === selectedMarche.titulaire) : null;
   const associatedBordereauHeaderId = associatedBordereauHeader ? associatedBordereauHeader.id : null;
-  const providerBcs = bcs.filter(bc => selectedMarche && bc.marche_id === selectedMarche.id);
-  const providerBls = bls.filter(bl => selectedMarche && bl.marche_id === selectedMarche.id);
-  const providerFactures = factures.filter(f => selectedMarche && f.marche_id === selectedMarche.id);
+  const providerBcs = bcs.filter(bc => selectedMarche && bc.marche_id == selectedMarche.id);
+  const providerBls = bls.filter(bl => selectedMarche && bl.marche_id == selectedMarche.id);
+  const providerFactures = factures.filter(f => selectedMarche && f.marche_id == selectedMarche.id);
 
   const recalculateBcTotals = (itemsList) => {
     let ht = 0;
@@ -1130,6 +1208,108 @@ const MarchesContent = () => {
     }
   };
 
+  const handleGenerateConformite = async (pvReceptionId) => {
+    try {
+      // Find the selected PV de Réception
+      const selectedPv = pvs.find(p => p.id == pvReceptionId);
+      if (!selectedPv) {
+        alert('PV de réception introuvable.');
+        return;
+      }
+
+      // Find the associated BL from already-loaded data (search all bls as fallback)
+      const bl = providerBls.find(b => b.id == selectedPv.bon_livraison_id)
+               || bls.find(b => b.id == selectedPv.bon_livraison_id);
+      if (!bl) {
+        alert('Bon de livraison associé introuvable (ID: ' + selectedPv.bon_livraison_id + ')');
+        return;
+      }
+      console.log('BL found:', bl.numeroBL, '| items count:', (bl.items || []).length, '| first item:', bl.items?.[0]);
+
+      // Parse BL items
+      let blItems = [];
+      if (bl.items) {
+        if (Array.isArray(bl.items)) {
+          blItems = bl.items;
+        } else if (typeof bl.items === 'string') {
+          try {
+            let parsed = JSON.parse(bl.items);
+            if (typeof parsed === 'string') parsed = JSON.parse(parsed);
+            if (Array.isArray(parsed)) blItems = parsed;
+          } catch (e) {
+            console.error('Erreur parsing items BL:', e);
+          }
+        }
+      }
+
+      if (blItems.length === 0) {
+        alert('Aucun produit trouvé dans le bon de livraison.');
+        return;
+      }
+
+      // Build conformite lines from BL items
+      const conformites = blItems.map((item, index) => ({
+        numero_ligne: index + 1,
+        designation: item.service_description || item.designation || item.label || item.name || 'Produit',
+        unite: item.unit_of_measure || item.unite || item.unit || 'U',
+        quantite: parseFloat(item.qty || item.quantity || item.qte || 0),
+        conformite: 'Conforme',
+        observation: ''
+      }));
+
+      console.log('Conformite lines generated from BL:', conformites);
+
+      setNewConformiteData({
+        pv_reception_id: pvReceptionId,
+        conformites: conformites
+      });
+
+    } catch (error) {
+      console.error('Erreur generate conformite', error);
+      alert('Erreur: ' + (error.message || 'Erreur inconnue'));
+    }
+  };
+
+  const handleUpdateConformiteLine = (index, field, value) => {
+    const updated = [...newConformiteData.conformites];
+    updated[index] = { ...updated[index], [field]: value };
+    setNewConformiteData({ ...newConformiteData, conformites: updated });
+  };
+
+  const handleSaveConformite = async (e) => {
+    e.preventDefault();
+    if (!newConformiteData.pv_reception_id) {
+        alert("Veuillez sélectionner un bon de livraison (PV de réception).");
+        return;
+    }
+    try {
+      await api.put(`/pv-receptions/${newConformiteData.pv_reception_id}/conformites`, {
+          conformites: newConformiteData.conformites
+      });
+      fetchPvs();
+      setShowConformiteModal(false);
+      alert('PV de conformité enregistré avec succès.');
+    } catch (error) {
+      console.error('Erreur save conformite', error);
+      alert("Erreur lors de l'enregistrement du PV de conformité.");
+    }
+  };
+
+  const handleExportConformite = async (pv) => {
+    try {
+        const res = await api.get(`/pv-receptions/${pv.id}/conformites/export`, { responseType: 'blob' });
+        const url = window.URL.createObjectURL(new Blob([res.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        const bcRef = providerBls.find(b => b.id === pv.bon_livraison_id)?.reference_bc || 'Inconnu';
+        link.setAttribute('download', `PV_Conformite_BC_${bcRef.replace(/[\/\s]/g, '_')}.doc`);
+        document.body.appendChild(link);
+        link.click();
+    } catch (e) {
+        console.error("Export error", e);
+        alert("Erreur lors de l'exportation du PV de conformité.");
+    }
+  };
 
   const renderDocumentContent = () => {
     const sName = fournisseurs.find(f => f.id === selectedMarche.id_fournisseur)?.raisonSociale || 'DISMA Maroc';
@@ -1898,7 +2078,241 @@ const MarchesContent = () => {
       );
     }
 
-    // Elegant fallback for other document tabs
+    if (activeDocTab === 'pv') {
+      const filteredPvs = pvs.filter(p => selectedMarche && p.marche_id == selectedMarche.id);
+      
+      return (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <FileText size={20} color="#0f766e" /> PV de Réception
+            </h3>
+            <button
+              onClick={() => {
+                setEditingPv(null);
+                setNewPvData({
+                  bon_livraison_id: '',
+                  marche_id: selectedMarche.id,
+                  date_reception: new Date().toISOString().split('T')[0],
+                  commissions: []
+                });
+                setShowPvModal(true);
+              }}
+              className="btn-primary"
+              style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}
+            >
+              <Plus size={15} /> Nouveau PV
+            </button>
+          </div>
+
+          <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
+            <div style={{ padding: '24px', fontFamily: "'Inter', sans-serif" }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid #cbd5e1', textAlign: 'left' }}>
+                    <th style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '700', color: '#64748b' }}>N° BL ASSOCIÉ</th>
+                    <th style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '700', color: '#64748b' }}>DATE RECEPTION</th>
+                    <th style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '700', color: '#64748b' }}>MEMBRES</th>
+                    <th style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '700', color: '#64748b', textAlign: 'center' }}>ACTIONS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredPvs.length === 0 ? (
+                    <tr>
+                      <td colSpan="4" style={{ padding: '24px', textAlign: 'center', color: '#64748b', fontSize: '14px' }}>
+                        Aucun PV de réception trouvé.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredPvs.map((pv, idx) => (
+                      <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '14px 8px', fontSize: '13px', fontWeight: '600', color: '#0f172a' }}>
+                           {providerBls.find(b => b.id == pv.bon_livraison_id)?.numeroBL || 'Inconnu'}
+                        </td>
+                        <td style={{ padding: '14px 8px', fontSize: '12px', color: '#475569' }}>
+                          {new Date(pv.date_reception).toLocaleDateString('fr-FR')}
+                        </td>
+                        <td style={{ padding: '14px 8px', fontSize: '12px', color: '#475569' }}>
+                          {pv.commissions ? pv.commissions.length : 0} membres
+                        </td>
+                        <td style={{ padding: '14px 8px', display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
+                          <button
+                            onClick={() => {
+                              setEditingPv(pv);
+                              setNewPvData({
+                                bon_livraison_id: pv.bon_livraison_id,
+                                marche_id: pv.marche_id,
+                                date_reception: pv.date_reception,
+                                commissions: pv.commissions || []
+                              });
+                              setShowPvModal(true);
+                            }}
+                            title="Modifier"
+                            style={{
+                              width: '32px', height: '32px', borderRadius: '8px', border: '1px solid rgba(59, 130, 246, 0.18)', backgroundColor: 'rgba(59, 130, 246, 0.05)', color: '#3b82f6', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s'
+                            }}
+                          >
+                            <Edit2 size={15} />
+                          </button>
+                          <button
+                            onClick={async () => {
+                                if (window.confirm("Supprimer ce PV ?")) {
+                                    await api.delete(`/pv-receptions/${pv.id}`);
+                                    fetchPvs();
+                                }
+                            }}
+                            title="Supprimer"
+                            style={{
+                              width: '32px', height: '32px', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.18)', backgroundColor: 'rgba(239, 68, 68, 0.05)', color: '#ef4444', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s'
+                            }}
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                          <button
+                            onClick={async () => {
+                                try {
+                                    const res = await api.get(`/pv-receptions/${pv.id}/export`, { responseType: 'blob' });
+                                    const url = window.URL.createObjectURL(new Blob([res.data]));
+                                    const link = document.createElement('a');
+                                    link.href = url;
+                                    link.setAttribute('download', `PV_Reception_${pv.id}.doc`);
+                                    document.body.appendChild(link);
+                                    link.click();
+                                } catch (e) {
+                                    console.error("Export error", e);
+                                }
+                            }}
+                            title="Télécharger Word"
+                            style={{
+                              width: '32px', height: '32px', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.18)', backgroundColor: 'rgba(16, 185, 129, 0.05)', color: '#10b981', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s'
+                            }}
+                          >
+                            <Download size={14} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (activeDocTab === 'conformite') {
+      const filteredPvs = pvs.filter(p => selectedMarche && p.marche_id == selectedMarche.id && p.pv_conformites && p.pv_conformites.length > 0);
+      const eligiblePvsForCreation = pvs.filter(p => selectedMarche && p.marche_id == selectedMarche.id);
+      
+      return (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <FileText size={20} color="#0f766e" /> PV de Conformité
+            </h3>
+            <button
+              onClick={() => {
+                setEditingConformite(null);
+                setNewConformiteData({
+                  pv_reception_id: '',
+                  conformites: []
+                });
+                setShowConformiteModal(true);
+              }}
+              className="btn-primary"
+              style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}
+            >
+              <Plus size={15} /> Ajouter PV de Conformité
+            </button>
+          </div>
+
+          <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
+            <div style={{ padding: '24px', fontFamily: "'Inter', sans-serif" }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid #cbd5e1', textAlign: 'left' }}>
+                    <th style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '700', color: '#64748b' }}>N° BL ASSOCIÉ</th>
+                    <th style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '700', color: '#64748b' }}>DATE RECEPTION</th>
+                    <th style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '700', color: '#64748b' }}>ARTICLES</th>
+                    <th style={{ padding: '12px 8px', fontSize: '11px', fontWeight: '700', color: '#64748b', textAlign: 'center' }}>ACTIONS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredPvs.length === 0 ? (
+                    <tr>
+                      <td colSpan="4" style={{ padding: '24px', textAlign: 'center', color: '#64748b', fontSize: '14px' }}>
+                        Aucun PV de conformité trouvé.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredPvs.map((pv, idx) => (
+                      <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '14px 8px', fontSize: '13px', fontWeight: '600', color: '#0f172a' }}>
+                           {providerBls.find(b => b.id == pv.bon_livraison_id)?.numeroBL || 'Inconnu'}
+                        </td>
+                        <td style={{ padding: '14px 8px', fontSize: '12px', color: '#475569' }}>
+                          {new Date(pv.date_reception).toLocaleDateString('fr-FR')}
+                        </td>
+                        <td style={{ padding: '14px 8px', fontSize: '12px', color: '#475569' }}>
+                          {pv.pv_conformites ? pv.pv_conformites.length : 0} articles
+                        </td>
+                        <td style={{ padding: '14px 8px', display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
+                          <button
+                            onClick={() => {
+                              setEditingConformite(pv);
+                              setNewConformiteData({
+                                pv_reception_id: pv.id,
+                                conformites: pv.pv_conformites || []
+                              });
+                              setShowConformiteModal(true);
+                            }}
+                            title="Modifier"
+                            style={{
+                              width: '32px', height: '32px', borderRadius: '8px', border: '1px solid rgba(59, 130, 246, 0.18)', backgroundColor: 'rgba(59, 130, 246, 0.05)', color: '#3b82f6', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s'
+                            }}
+                          >
+                            <Edit2 size={15} />
+                          </button>
+                          <button
+                            onClick={async () => {
+                                if (window.confirm("Voulez-vous vraiment supprimer ce PV de Conformité ?")) {
+                                    try {
+                                        await api.delete(`/pv-receptions/${pv.id}/conformites`);
+                                        fetchPvs();
+                                    } catch (error) {
+                                        console.error("Erreur de suppression", error);
+                                        alert("Erreur lors de la suppression.");
+                                    }
+                                }
+                            }}
+                            title="Supprimer"
+                            style={{
+                              width: '32px', height: '32px', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.18)', backgroundColor: 'rgba(239, 68, 68, 0.05)', color: '#ef4444', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s'
+                            }}
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                          <button
+                            onClick={() => handleExportConformite(pv)}
+                            title="Télécharger Word"
+                            style={{
+                              width: '32px', height: '32px', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.18)', backgroundColor: 'rgba(16, 185, 129, 0.05)', color: '#10b981', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s'
+                            }}
+                          >
+                            <Download size={14} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      );
+    }
     return (
       <div style={{ padding: '40px 20px', textAlign: 'center' }}>
         <FileText size={48} color="#94a3b8" style={{ marginBottom: '16px', opacity: 0.5 }} />
@@ -1956,11 +2370,100 @@ const MarchesContent = () => {
             </div>
 
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button className="btn-secondary">
+              <button
+                className="btn-secondary"
+                onClick={() => {
+                  const consumed = providerBls.reduce((sum, bl) => sum + parseFloat(bl.montantTTC || 0), 0);
+                  const remaining = parseFloat(selectedMarche.budget || 0) - consumed;
+                  const progress = parseFloat(selectedMarche.budget || 1) > 0
+                    ? Math.min(100, (consumed / parseFloat(selectedMarche.budget)) * 100).toFixed(1)
+                    : '0.0';
+                  const iframe = document.createElement('iframe');
+                  iframe.style.position = 'absolute';
+                  iframe.style.width = '0';
+                  iframe.style.height = '0';
+                  iframe.style.border = 'none';
+                  document.body.appendChild(iframe);
+                  
+                  const doc = iframe.contentWindow.document;
+                  doc.open();
+                  doc.write(`
+                    <!DOCTYPE html><html><head><meta charset="utf-8">
+                    <title>Marché — ${selectedMarche.titulaire}</title>
+                    <style>
+                      * { margin: 0; padding: 0; box-sizing: border-box; }
+                      body { font-family: 'Segoe UI', Arial, sans-serif; color: #0f172a; padding: 48px; background: white; }
+                      .header { border-bottom: 3px solid #0f766e; padding-bottom: 20px; margin-bottom: 32px; display: flex; justify-content: space-between; align-items: flex-end; }
+                      .header h1 { font-size: 22px; font-weight: 800; color: #0f766e; }
+                      .header .meta { font-size: 12px; color: #64748b; text-align: right; }
+                      .section { margin-bottom: 32px; }
+                      .section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 16px; }
+                      .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+                      .field label { font-size: 11px; color: #94a3b8; font-weight: 600; text-transform: uppercase; display: block; margin-bottom: 4px; }
+                      .field span { font-size: 15px; font-weight: 700; color: #0f172a; }
+                      .fin-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+                      .fin-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; text-align: center; }
+                      .fin-card label { font-size: 10px; color: #94a3b8; font-weight: 700; text-transform: uppercase; display: block; margin-bottom: 8px; }
+                      .fin-card span { font-size: 18px; font-weight: 800; }
+                      .fin-card.budget span { color: #0f172a; }
+                      .fin-card.consumed span { color: #0f766e; }
+                      .fin-card.remaining span { color: #f59e0b; }
+                      .fin-card.progress span { color: #3b82f6; }
+                      .bar-wrap { margin-top: 24px; }
+                      .bar-wrap label { font-size: 11px; color: #64748b; font-weight: 600; display: block; margin-bottom: 6px; }
+                      .bar-bg { width: 100%; height: 10px; background: #e2e8f0; border-radius: 5px; overflow: hidden; }
+                      .bar-fill { height: 100%; background: linear-gradient(90deg, #0f766e, #10b981); border-radius: 5px; }
+                      .footer { margin-top: 48px; border-top: 1px solid #e2e8f0; padding-top: 16px; font-size: 11px; color: #94a3b8; display: flex; justify-content: space-between; }
+                      @media print { body { padding: 32px; } }
+                    </style></head><body>
+                    <div class="header">
+                      <div>
+                        <h1>${selectedMarche.titulaire}</h1>
+                        <div style="font-size:13px;color:#64748b;margin-top:4px;">Fournisseur : <strong>${sName}</strong></div>
+                      </div>
+                      <div class="meta">
+                        <div>Imprimé le ${new Date().toLocaleDateString('fr-FR')}</div>
+                        <div style="margin-top:4px;font-weight:700;color:#0f766e;">Statut : ${selectedMarche.statut || 'Actif'}</div>
+                      </div>
+                    </div>
+                    <div class="section">
+                      <div class="section-title">Informations du marché</div>
+                      <div class="grid">
+                        <div class="field"><label>Nom du marché</label><span>${selectedMarche.titulaire}</span></div>
+                        <div class="field"><label>Fournisseur / Titulaire</label><span>${sName}</span></div>
+                        <div class="field"><label>Date de début</label><span>${new Date(selectedMarche.date_debut).toLocaleDateString('fr-FR')}</span></div>
+                        <div class="field"><label>Date d'expiration</label><span>${new Date(selectedMarche.date_fin).toLocaleDateString('fr-FR')}</span></div>
+                      </div>
+                    </div>
+                    <div class="section">
+                      <div class="section-title">Informations financières</div>
+                      <div class="fin-grid">
+                        <div class="fin-card budget"><label>Budget Total</label><span>${parseFloat(selectedMarche.budget || 0).toLocaleString('fr-FR', {minimumFractionDigits:2})} MAD</span></div>
+                        <div class="fin-card consumed"><label>Montant Consommé</label><span>${consumed.toLocaleString('fr-FR', {minimumFractionDigits:2})} MAD</span></div>
+                        <div class="fin-card remaining"><label>Montant Restant</label><span>${remaining.toLocaleString('fr-FR', {minimumFractionDigits:2})} MAD</span></div>
+                        <div class="fin-card progress"><label>Avancement</label><span>${progress}%</span></div>
+                      </div>
+                      <div class="bar-wrap">
+                        <label>Progression de la consommation</label>
+                        <div class="bar-bg"><div class="bar-fill" style="width:${progress}%"></div></div>
+                      </div>
+                    </div>
+                    <div class="footer">
+                      <span>Document généré automatiquement</span>
+                      <span>Système de gestion des marchés publics</span>
+                    </div>
+                    </body></html>
+                  `);
+                  doc.close();
+                  
+                  iframe.contentWindow.focus();
+                  setTimeout(() => {
+                    iframe.contentWindow.print();
+                    setTimeout(() => document.body.removeChild(iframe), 1000);
+                  }, 200);
+                }}
+              >
                 <Printer size={15} /> Imprimer
-              </button>
-              <button className="btn-primary">
-                Modifier
               </button>
             </div>
           </div>
@@ -2254,9 +2757,6 @@ const MarchesContent = () => {
               <p style={{ color: '#64748b', fontSize: '13px', margin: 0 }}>Gérez vos marchés, commandes et documents associés</p>
             </div>
             <div style={{ display: 'flex', gap: '12px' }}>
-              <button className="btn-secondary">
-                <Filter size={16} /> Filtres
-              </button>
               <button
                 onClick={() => setShowModal(true)}
                 className="btn-primary"
@@ -2269,25 +2769,22 @@ const MarchesContent = () => {
           {/* Stats */}
           <div style={{ display: 'flex', gap: '20px', marginBottom: '32px' }}>
             {[
-              { label: 'Total marchés', value: marches.length || 0, color: '#0f172a' },
-              { label: 'Actifs', value: marches.filter(m => m.statut === 'Actif').length || 0, color: '#10b981' },
-              { label: 'En cours', value: marches.filter(m => m.statut === 'En cours').length || 0, color: '#f59e0b' },
-              { label: 'Budget total (MAD)', value: (marches.reduce((sum, m) => sum + parseFloat(m.budget || 0), 0) / 1000).toFixed(0) + 'K', color: '#3b82f6' }
-            ].map((stat, i) => {
-              const classes = ['stat-card-dark', 'stat-card-green', 'stat-card-orange', 'stat-card-blue'];
-              return (
-                <div key={i}
-                  className={`stat-card ${classes[i]}`}
-                  style={{
-                    flex: 1, backgroundColor: 'white', padding: '20px', borderRadius: '12px',
-                    border: '1px solid #e2e8f0', textAlign: 'center', boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
-                  }}
-                >
-                  <div style={{ fontSize: '28px', fontWeight: '700', color: stat.color, marginBottom: '4px' }}>{stat.value}</div>
-                  <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', textTransform: 'uppercase' }}>{stat.label}</div>
-                </div>
-              );
-            })}
+              { label: 'Total marchés', value: marches.length, color: '#0f172a', cls: 'stat-card-dark' },
+              { label: 'Marchés actifs', value: marches.filter(m => !m.is_archived).length, color: '#10b981', cls: 'stat-card-green' },
+              { label: 'Marchés archivés', value: marches.filter(m => m.is_archived).length, color: '#64748b', cls: 'stat-card-dark' },
+              { label: 'Budget total (MAD)', value: (marches.reduce((sum, m) => sum + parseFloat(m.budget || 0), 0) / 1000).toFixed(0) + 'K', color: '#3b82f6', cls: 'stat-card-blue' }
+            ].map((stat, i) => (
+              <div key={i}
+                className={`stat-card ${stat.cls}`}
+                style={{
+                  flex: 1, backgroundColor: 'white', padding: '20px', borderRadius: '12px',
+                  border: '1px solid #e2e8f0', textAlign: 'center', boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+                }}
+              >
+                <div style={{ fontSize: '28px', fontWeight: '700', color: stat.color, marginBottom: '4px' }}>{stat.value}</div>
+                <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', textTransform: 'uppercase' }}>{stat.label}</div>
+              </div>
+            ))}
           </div>
 
           {/* Tabs: Actifs / Archivés */}
@@ -2355,15 +2852,23 @@ const MarchesContent = () => {
                       </div>
                     </div>
 
-                    <div style={{ marginBottom: '20px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: '600', marginBottom: '6px' }}>
-                        <span style={{ color: '#64748b' }}>Consommé</span>
-                        <span style={{ color: '#0f766e' }}>{marche.consomme}%</span>
-                      </div>
-                      <div style={{ width: '100%', height: '6px', backgroundColor: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
-                        <div style={{ width: `${marche.consomme}%`, height: '100%', backgroundColor: '#0f766e', borderRadius: '3px' }}></div>
-                      </div>
-                    </div>
+                    {(() => {
+                      const consumed = bls.filter(bl => bl.marche_id === marche.id)
+                        .reduce((sum, bl) => sum + parseFloat(bl.montantTTC || 0), 0);
+                      const budget = parseFloat(marche.budget || 0);
+                      const progress = budget > 0 ? Math.min(100, (consumed / budget) * 100) : 0;
+                      return (
+                        <div style={{ marginBottom: '20px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: '600', marginBottom: '6px' }}>
+                            <span style={{ color: '#64748b' }}>Consommé</span>
+                            <span style={{ color: '#0f766e' }}>{consumed.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} MAD ({progress.toFixed(1)}%)</span>
+                          </div>
+                          <div style={{ width: '100%', height: '6px', backgroundColor: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
+                            <div style={{ width: `${progress}%`, height: '100%', backgroundColor: '#0f766e', borderRadius: '3px' }}></div>
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                     <div style={{ display: 'flex', gap: '12px' }}>
                       {!marche.is_archived && (
@@ -4095,6 +4600,279 @@ const MarchesContent = () => {
                 Fermer
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showPvModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50
+        }}>
+          <div style={{
+            backgroundColor: 'white', borderRadius: '16px', width: '100%', maxWidth: '800px',
+            padding: '32px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
+            maxHeight: '90vh', overflowY: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', borderBottom: '1px solid #e2e8f0', paddingBottom: '16px' }}>
+              <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: '#0f172a' }}>
+                {editingPv ? 'Modifier le PV de Réception' : 'Nouveau PV de Réception'}
+              </h2>
+              <button onClick={() => { setShowPvModal(false); setEditingPv(null); }} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#64748b' }}>&times;</button>
+            </div>
+
+            <form onSubmit={handleSubmitPv} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              
+              {/* Informations du BL */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '13px', fontWeight: '600', color: '#475569' }}>N° Bon de Livraison *</label>
+                  <select
+                    value={newPvData.bon_livraison_id}
+                    onChange={(e) => setNewPvData({ ...newPvData, bon_livraison_id: e.target.value })}
+                    style={{ padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none' }}
+                    required
+                  >
+                    <option value="">Sélectionnez un BL</option>
+                    {providerBls.map(bl => (
+                      <option key={bl.id} value={bl.id}>{bl.numeroBL} (émis le {new Date(bl.dateLivraison).toLocaleDateString('fr-FR')})</option>
+                    ))}
+                  </select>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '13px', fontWeight: '600', color: '#475569' }}>Date de Réception *</label>
+                  <input
+                    type="date"
+                    value={newPvData.date_reception}
+                    onChange={(e) => setNewPvData({ ...newPvData, date_reception: e.target.value })}
+                    style={{ padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none' }}
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Read-only populated data from BL */}
+              {newPvData.bon_livraison_id && (
+                <div style={{ backgroundColor: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  {(() => {
+                    const selBl = providerBls.find(b => b.id.toString() === newPvData.bon_livraison_id.toString());
+                    const fournName = fournisseurs.find(f => f.id.toString() === selBl?.fournisseur_id?.toString())?.raisonSociale || 'Inconnu';
+                    return (
+                      <>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase' }}>Fournisseur</span>
+                          <span style={{ fontSize: '14px', fontWeight: '600', color: '#0f172a' }}>{fournName}</span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase' }}>Rubrique</span>
+                          <span style={{ fontSize: '14px', fontWeight: '600', color: '#0f172a' }}>{selBl?.rubrique || 'Produits alimentaires'}</span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', gridColumn: 'span 2' }}>
+                          <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase' }}>Objet / Marché</span>
+                          <span style={{ fontSize: '14px', fontWeight: '600', color: '#0f172a' }}>{selectedMarche?.titulaire}</span>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
+
+              {/* Commission Members */}
+              <div style={{ marginTop: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <label style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>Membres de la commission</label>
+                  <button type="button" onClick={handleAddPvCommission} style={{ fontSize: '12px', padding: '6px 12px', backgroundColor: '#e0e7ff', color: '#4f46e5', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Plus size={14} /> Ajouter un membre
+                  </button>
+                </div>
+                
+                <datalist id="commission-names">
+                  {Array.from(new Set(pvs.flatMap(p => p.commissions || []).map(c => c.nom_prenom))).map(name => (
+                    <option key={name} value={name} />
+                  ))}
+                </datalist>
+
+                <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', textAlign: 'left' }}>
+                        <th style={{ padding: '10px 12px', fontWeight: '600', color: '#64748b' }}>Nom et Prénom</th>
+                        <th style={{ padding: '10px 12px', fontWeight: '600', color: '#64748b' }}>Fonction</th>
+                        <th style={{ padding: '10px 12px', fontWeight: '600', color: '#64748b', width: '140px' }}>Rôle</th>
+                        <th style={{ padding: '10px 12px', width: '50px' }}></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(!newPvData.commissions || newPvData.commissions.length === 0) ? (
+                        <tr>
+                          <td colSpan="4" style={{ padding: '24px', textAlign: 'center', color: '#94a3b8', fontStyle: 'italic' }}>
+                            Aucun membre ajouté.
+                          </td>
+                        </tr>
+                      ) : (
+                        newPvData.commissions.map((member, index) => (
+                          <tr key={index} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '8px 12px' }}>
+                              <input 
+                                type="text" 
+                                list="commission-names"
+                                value={member.nom_prenom} 
+                                onChange={(e) => handleCommissionNameChange(index, e.target.value)} 
+                                style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none' }}
+                                placeholder="Commencez à taper..."
+                                required 
+                              />
+                            </td>
+                            <td style={{ padding: '8px 12px' }}>
+                              <input 
+                                type="text" 
+                                value={member.fonction} 
+                                onChange={(e) => handleUpdatePvCommission(index, 'fonction', e.target.value)} 
+                                style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none' }}
+                                required 
+                              />
+                            </td>
+                            <td style={{ padding: '8px 12px' }}>
+                              <select 
+                                value={member.role} 
+                                onChange={(e) => handleUpdatePvCommission(index, 'role', e.target.value)}
+                                style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none', backgroundColor: 'white' }}
+                              >
+                                <option value="President">Président</option>
+                                <option value="Membre">Membre</option>
+                                <option value="Rapporteur">Rapporteur</option>
+                              </select>
+                            </td>
+                            <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                              <button type="button" onClick={() => handleRemovePvCommission(index)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0 }}>
+                                <Trash2 size={16} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '16px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
+                <button type="button" onClick={() => { setShowPvModal(false); setEditingPv(null); }} style={{ padding: '10px 24px', borderRadius: '8px', border: '1px solid #cbd5e1', backgroundColor: 'white', color: '#475569', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}>Annuler</button>
+                <button type="submit" style={{ padding: '10px 24px', borderRadius: '8px', border: 'none', backgroundColor: '#0f766e', color: 'white', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}>
+                  {editingPv ? 'Mettre à jour' : 'Enregistrer le PV'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showConformiteModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50
+        }}>
+          <div style={{
+            backgroundColor: 'white', borderRadius: '16px', width: '100%', maxWidth: '900px',
+            padding: '32px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
+            maxHeight: '90vh', display: 'flex', flexDirection: 'column'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', borderBottom: '1px solid #e2e8f0', paddingBottom: '16px' }}>
+              <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: '#0f172a' }}>
+                {editingConformite ? 'Modifier PV de Conformité' : 'Générer PV de Conformité'}
+              </h2>
+              <button onClick={() => { setShowConformiteModal(false); setEditingConformite(null); }} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#64748b' }}>&times;</button>
+            </div>
+
+            <form onSubmit={handleSaveConformite} style={{ display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto', flex: 1 }}>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '13px', fontWeight: '600', color: '#475569' }}>Sélectionner un Bon de Livraison (PV de Réception) *</label>
+                <select
+                  value={newConformiteData.pv_reception_id}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setNewConformiteData({ ...newConformiteData, pv_reception_id: val });
+                    if (val && !editingConformite) {
+                      handleGenerateConformite(val);
+                    }
+                  }}
+                  style={{ padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none' }}
+                  required
+                  disabled={!!editingConformite}
+                >
+                  <option value="">Sélectionnez un BL ayant un PV de Réception</option>
+                  {pvs.filter(p => selectedMarche && p.marche_id == selectedMarche.id).map(pv => {
+                    const bl = providerBls.find(b => b.id == pv.bon_livraison_id);
+                    return (
+                      <option key={pv.id} value={pv.id}>
+                        {bl ? bl.numeroBL : 'BL Inconnu'} (PV du {new Date(pv.date_reception).toLocaleDateString('fr-FR')})
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
+              {newConformiteData.conformites && newConformiteData.conformites.length > 0 && (
+                <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', marginTop: '10px' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', textAlign: 'left' }}>
+                        <th style={{ padding: '10px 12px', fontWeight: '600', color: '#64748b', width: '50px' }}>N°</th>
+                        <th style={{ padding: '10px 12px', fontWeight: '600', color: '#64748b' }}>Désignation</th>
+                        <th style={{ padding: '10px 12px', fontWeight: '600', color: '#64748b', width: '80px', textAlign: 'center' }}>Unité</th>
+                        <th style={{ padding: '10px 12px', fontWeight: '600', color: '#64748b', width: '80px', textAlign: 'center' }}>Quantité</th>
+                        <th style={{ padding: '10px 12px', fontWeight: '600', color: '#64748b', width: '120px' }}>Conformité</th>
+                        <th style={{ padding: '10px 12px', fontWeight: '600', color: '#64748b' }}>Observations</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {newConformiteData.conformites.map((item, index) => (
+                        <tr key={index} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                          <td style={{ padding: '8px 12px', color: '#0f766e', fontWeight: '600' }}>{item.numero_ligne}</td>
+                          <td style={{ padding: '8px 12px', color: '#0f172a', fontWeight: '500' }}>{item.designation}</td>
+                          <td style={{ padding: '8px 12px', textAlign: 'center' }}>{item.unite}</td>
+                          <td style={{ padding: '8px 12px', textAlign: 'center', fontWeight: '600' }}>{item.quantite}</td>
+                          <td style={{ padding: '8px 12px' }}>
+                            <select 
+                              value={item.conformite} 
+                              onChange={(e) => handleUpdateConformiteLine(index, 'conformite', e.target.value)}
+                              style={{ 
+                                width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', 
+                                outline: 'none', backgroundColor: item.conformite === 'Conforme' ? '#ecfdf5' : '#fef2f2',
+                                color: item.conformite === 'Conforme' ? '#0f766e' : '#ef4444',
+                                fontWeight: '600'
+                              }}
+                            >
+                              <option value="Conforme">Conforme</option>
+                              <option value="Non Conforme">Non Conforme</option>
+                            </select>
+                          </td>
+                          <td style={{ padding: '8px 12px' }}>
+                            <input 
+                              type="text" 
+                              value={item.observation || ''} 
+                              onChange={(e) => handleUpdateConformiteLine(index, 'observation', e.target.value)}
+                              placeholder="Remarques..."
+                              style={{ width: '100%', padding: '6px 8px', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none' }}
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '16px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
+                <button type="button" onClick={() => { setShowConformiteModal(false); setEditingConformite(null); }} style={{ padding: '10px 24px', borderRadius: '8px', border: '1px solid #cbd5e1', backgroundColor: 'white', color: '#475569', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}>Annuler</button>
+                <button type="submit" style={{ padding: '10px 24px', borderRadius: '8px', border: 'none', backgroundColor: '#0f766e', color: 'white', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}>
+                  Enregistrer
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
