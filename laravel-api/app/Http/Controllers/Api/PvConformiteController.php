@@ -51,6 +51,7 @@ class PvConformiteController extends Controller
         foreach ($items as $index => $item) {
             $conformites[] = $pv->pvConformites()->create([
                 'numero_ligne'  => $index + 1,
+                'price_number'  => $item['price_number'] ?? null,
                 // BL items use 'service_description' as the product name field
                 'designation'   => $item['service_description'] ?? $item['designation'] ?? $item['label'] ?? $item['name'] ?? 'Produit',
                 // BL items use 'unit_of_measure' as the unit field
@@ -66,20 +67,46 @@ class PvConformiteController extends Controller
     }
 
     /**
+     * Store conformité lines (batch store).
+     * POST /pv-receptions/{id}/conformites
+     */
+    public function store(Request $request, $pvReceptionId)
+    {
+        return $this->update($request, $pvReceptionId);
+    }
+
+    /**
      * Update conformité lines (batch update).
      * PUT /pv-receptions/{id}/conformites
      */
     public function update(Request $request, $pvReceptionId)
     {
-        $pv = PvReception::findOrFail($pvReceptionId);
+        $pv = PvReception::with('bonLivraison')->findOrFail($pvReceptionId);
+        $bl = $pv->bonLivraison;
+
+        if (!$bl) {
+            return response()->json(['message' => 'Bon de livraison associé introuvable.'], 404);
+        }
+
+        // Parse items from the BL
+        $blItems = $bl->items;
+        if (is_string($blItems)) {
+            $blItems = json_decode($blItems, true);
+            if (is_string($blItems)) {
+                $blItems = json_decode($blItems, true);
+            }
+        }
+        
+        if (!is_array($blItems)) {
+            $blItems = [];
+        }
 
         $validated = $request->validate([
             'conformites' => 'required|array',
             'conformites.*.id' => 'nullable|integer',
             'conformites.*.numero_ligne' => 'required|integer',
+            'conformites.*.price_number' => 'nullable|string',
             'conformites.*.designation' => 'required|string',
-            'conformites.*.unite' => 'required|string',
-            'conformites.*.quantite' => 'required|numeric',
             'conformites.*.conformite' => 'required|string|in:Conforme,Non Conforme',
             'conformites.*.observation' => 'nullable|string',
         ]);
@@ -88,11 +115,57 @@ class PvConformiteController extends Controller
         $pv->pvConformites()->delete();
 
         foreach ($validated['conformites'] as $line) {
+            // Find corresponding item in BL by stable price_number (or fall back to designation / array index)
+            $blItem = null;
+            $incomingPriceNumber = $line['price_number'] ?? null;
+
+            if ($incomingPriceNumber !== null && $incomingPriceNumber !== '') {
+                foreach ($blItems as $item) {
+                    if (isset($item['price_number']) && strval($item['price_number']) === strval($incomingPriceNumber)) {
+                        $blItem = $item;
+                        break;
+                    }
+                }
+            }
+
+            // Fallback 1: match by designation/service_description if price_number match not found
+            if (!$blItem) {
+                foreach ($blItems as $item) {
+                    $itemDesc = $item['service_description'] ?? $item['designation'] ?? $item['label'] ?? $item['name'] ?? null;
+                    if ($itemDesc && strcasecmp(trim($itemDesc), trim($line['designation'])) === 0) {
+                        $blItem = $item;
+                        break;
+                    }
+                }
+            }
+
+            // Fallback 2: match by array index (numero_ligne - 1)
+            if (!$blItem) {
+                $idx = $line['numero_ligne'] - 1;
+                if (isset($blItems[$idx])) {
+                    $blItem = $blItems[$idx];
+                }
+            }
+
+            if ($blItem) {
+                $unite = $blItem['unit_of_measure'] ?? $blItem['unite'] ?? $blItem['unit'] ?? 'U';
+                $quantite = floatval($blItem['qty'] ?? $blItem['quantity'] ?? $blItem['qte'] ?? 0);
+                $designation = $blItem['service_description'] ?? $blItem['designation'] ?? $blItem['label'] ?? $blItem['name'] ?? $line['designation'];
+                $priceNumber = $blItem['price_number'] ?? $incomingPriceNumber;
+            } else {
+                // Ignore any quantity or unit sent from frontend, default to 0 / 'U' if not found in BL
+                $unite = 'U';
+                $quantite = 0;
+                $designation = $line['designation'];
+                $priceNumber = $incomingPriceNumber;
+            }
+
             $pv->pvConformites()->create([
                 'numero_ligne' => $line['numero_ligne'],
-                'designation' => $line['designation'],
-                'unite' => $line['unite'],
-                'quantite' => $line['quantite'],
+                'price_number' => $priceNumber,
+                'designation' => $designation,
+                'unite' => $unite,
+                'quantite' => $quantite,
                 'conformite' => $line['conformite'],
                 'observation' => $line['observation'] ?? null,
             ]);
@@ -174,9 +247,10 @@ class PvConformiteController extends Controller
         $html .= '</tr>';
 
         foreach ($pv->pvConformites as $line) {
+            $designationLabel = $line->price_number ? ('N° ' . $line->price_number . ' - ' . $line->designation) : $line->designation;
             $html .= '<tr style="height: 30px;">';
             $html .= '<td style="text-align: center;">' . $line->numero_ligne . '</td>';
-            $html .= '<td>' . $line->designation . '</td>';
+            $html .= '<td>' . $designationLabel . '</td>';
             $html .= '<td style="text-align: center;">' . $line->unite . '</td>';
             $html .= '<td style="text-align: center;">' . number_format($line->quantite, 2) . '</td>';
             $html .= '<td style="text-align: center;">' . $line->conformite . '</td>';

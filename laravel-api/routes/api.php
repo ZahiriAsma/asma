@@ -49,6 +49,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // PV Conformité routes
     Route::get('/pv-receptions/{id}/conformites', [\App\Http\Controllers\Api\PvConformiteController::class, 'index']);
     Route::post('/pv-receptions/{id}/conformites/generate', [\App\Http\Controllers\Api\PvConformiteController::class, 'generate']);
+    Route::post('/pv-receptions/{id}/conformites', [\App\Http\Controllers\Api\PvConformiteController::class, 'store']);
     Route::put('/pv-receptions/{id}/conformites', [\App\Http\Controllers\Api\PvConformiteController::class, 'update']);
     Route::delete('/pv-receptions/{id}/conformites', [\App\Http\Controllers\Api\PvConformiteController::class, 'destroy']);
     Route::get('/pv-receptions/{id}/conformites/export', [\App\Http\Controllers\Api\PvConformiteController::class, 'export']);
