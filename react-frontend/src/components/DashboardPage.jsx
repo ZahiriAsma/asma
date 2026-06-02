@@ -13,6 +13,7 @@ import BordereauContent from './BordereauContent';
 import StockContent from './StockContent';
 import { useDashboard } from '../context/DashboardContext';
 import api from '../api/axios';
+import dashboardLogo from '../assets/dashboard-logo.jpg';
 
 const CustomTooltip = ({ active, payload, label, isDark, clr }) => {
   if (active && payload && payload.length) {
@@ -434,10 +435,11 @@ const DashboardPage = () => {
         {/* Brand */}
         <div style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{
-            width: '36px', height: '36px', background: 'linear-gradient(135deg, #0f766e, #10b981)',
-            borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center'
+            width: '40px', height: '40px', background: 'white',
+            borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            overflow: 'hidden'
           }}>
-            <Package size={20} color="white" />
+            <img src={dashboardLogo} alt="InterNat Stock Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
           <div>
             <div style={{ fontWeight: '700', fontSize: '15px' }}>InterNat Stock</div>
