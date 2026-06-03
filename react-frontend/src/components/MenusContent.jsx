@@ -719,9 +719,7 @@ const MenusContent = () => {
                     <ul className="print-meal-list">{renderPrintMealList(menu.dejeuner)}</ul>
                     <p className="print-meal-title">Dîner ({menu.time_din})</p>
                     <ul className="print-meal-list">{renderPrintMealList(menu.diner)}</ul>
-                    <p style={{ margin: '8px 0 0', fontSize: '10px', color: '#64748b' }}>
-                      Résidents : {menu.residents} · Kcal : ~{menu.kcal_pd} / ~{menu.kcal_dej} / ~{menu.kcal_din}
-                    </p>
+
                   </>
                 ) : (
                   <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8' }}>Aucun menu planifié.</p>

@@ -64,6 +64,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Stock Routes
     Route::get('/stocks', [\App\Http\Controllers\Api\StockController::class, 'index']);
     Route::get('/stocks/export', [\App\Http\Controllers\Api\StockController::class, 'export']);
+    Route::post('/stocks/import-initial', [\App\Http\Controllers\Api\StockController::class, 'importInitial']);
 
     // Dashboard Route
     Route::get('/dashboard/stats', [\App\Http\Controllers\Api\DashboardController::class, 'stats']);
