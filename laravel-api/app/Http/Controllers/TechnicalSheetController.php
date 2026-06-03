@@ -113,6 +113,9 @@ class TechnicalSheetController extends Controller
             // Or simpler: the frontend will just send the full state for a meal, and we can delete the old ones.
             // The safest is for the frontend to manage deletions via destroy(), and we just updateOrCreate here.
             
+            if ($request->has('deleted_ids') && is_array($request->deleted_ids)) {
+                TechnicalSheet::whereIn('id', $request->deleted_ids)->delete();
+            }
             foreach ($request->items as $itemData) {
                 // If the item has an ID (and it's not a temp_ ID), use it to update
                 $matchAttributes = [

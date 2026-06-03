@@ -31,7 +31,8 @@ const FicheTechniqueModal = ({ selectedMenu, onClose, date, dayText }) => {
   const [peopleCounts, setPeopleCounts] = useState({ breakfast: 450, lunch: 450, dinner: 450 });
   
   const [loading, setLoading] = useState(true);
-  const [saveStatus, setSaveStatus] = useState('saved'); // 'saved', 'saving', 'dirty', 'error'
+  const [isSaving, setIsSaving] = useState(false);
+  const [deletedItems, setDeletedItems] = useState([]);
   const isFirstLoad = useRef(true);
 
   // Modal State for Ingredient Selector
@@ -152,13 +153,7 @@ const FicheTechniqueModal = ({ selectedMenu, onClose, date, dayText }) => {
                 });
               });
             });
-            setSaveStatus('dirty');
-          } else {
-            setSaveStatus('saved');
           }
-        } else {
-          // Empty sheets, user will add manually
-          setSaveStatus('saved');
         }
 
         setSheets(grouped);
@@ -166,7 +161,6 @@ const FicheTechniqueModal = ({ selectedMenu, onClose, date, dayText }) => {
 
       } catch (err) {
         console.error("Error loading Technical Sheet:", err);
-        setSaveStatus('error');
       } finally {
         setLoading(false);
         isFirstLoad.current = false;
@@ -176,77 +170,71 @@ const FicheTechniqueModal = ({ selectedMenu, onClose, date, dayText }) => {
     fetchData();
   }, [date, defaultResidents, selectedMenu]);
 
-  // 2. Debounced Batch Auto-Save
-  useEffect(() => {
-    if (loading || isFirstLoad.current || saveStatus === 'saved' || saveStatus === 'saving') return;
-
-    const saveTimeout = setTimeout(async () => {
-      setSaveStatus('saving');
-      
-      const payloadItems = [];
-      Object.keys(sheets).forEach(mealType => {
-        Object.keys(sheets[mealType]).forEach(plat => {
-          sheets[mealType][plat].forEach(row => {
-            payloadItems.push({
-              id: row.isNew ? null : row.id,
-              date: date,
-              meal_type: mealType,
-              plat_name: plat,
-              bordereau_id: row.bordereau_id,
-              quantity_per_person: row.quantity_per_person,
-              present_people: row.present_people,
-              calculated_quantity: row.calculated_quantity,
-              r: row.r,
-              pu_r: row.pu_r,
-              amount: row.amount
-            });
+  // --- Manual Save ---
+  const handleSave = async () => {
+    setIsSaving(true);
+    const payloadItems = [];
+    Object.keys(sheets).forEach(mealType => {
+      Object.keys(sheets[mealType]).forEach(plat => {
+        sheets[mealType][plat].forEach(row => {
+          payloadItems.push({
+            id: row.isNew ? null : row.id,
+            date: date,
+            meal_type: mealType,
+            plat_name: plat,
+            bordereau_id: row.bordereau_id,
+            quantity_per_person: row.quantity_per_person,
+            present_people: row.present_people,
+            calculated_quantity: row.calculated_quantity,
+            r: row.r,
+            pu_r: row.pu_r,
+            amount: row.amount
           });
         });
       });
+    });
 
-      try {
-        await api.post('/technical-sheets', { items: payloadItems });
-        
-        // Fetch fresh entries to resolve temp IDs to real database IDs
-        const res = await api.get(`/technical-sheets?date=${date}`);
-        const grouped = { breakfast: {}, lunch: {}, dinner: {} };
-        // initialize empty plats based on current state
-        Object.keys(sheets).forEach(m => {
-            Object.keys(sheets[m]).forEach(p => {
-                grouped[m][p] = [];
-            });
-        });
-
-        res.data.forEach(sheet => {
-          const meal = sheet.meal_type;
-          const plat = sheet.plat_name || 'Autre';
-          if (!grouped[meal]) grouped[meal] = {};
-          if (!grouped[meal][plat]) grouped[meal][plat] = [];
-
-          grouped[meal][plat].push({
-            ...sheet,
-            item: sheet.bordereau,
-            quantity_per_person: Number(sheet.quantity_per_person || 0),
-            present_people: Number(sheet.present_people),
-            r: Number(sheet.r || 1.00),
-            calculated_quantity: Number(sheet.calculated_quantity),
-            pu_r: Number(sheet.pu_r),
-            amount: Number(sheet.amount),
-            isNew: false
+    try {
+      await api.post('/technical-sheets', { items: payloadItems, deleted_ids: deletedItems });
+      
+      const res = await api.get(`/technical-sheets?date=${date}`);
+      const grouped = { breakfast: {}, lunch: {}, dinner: {} };
+      Object.keys(sheets).forEach(m => {
+          Object.keys(sheets[m]).forEach(p => {
+              grouped[m][p] = [];
           });
+      });
+
+      res.data.forEach(sheet => {
+        const meal = sheet.meal_type;
+        const plat = sheet.plat_name || 'Autre';
+        if (!grouped[meal]) grouped[meal] = {};
+        if (!grouped[meal][plat]) grouped[meal][plat] = [];
+
+        grouped[meal][plat].push({
+          ...sheet,
+          item: sheet.bordereau,
+          quantity_per_person: Number(sheet.quantity_per_person || 0),
+          present_people: Number(sheet.present_people),
+          r: Number(sheet.r || 1.00),
+          calculated_quantity: Number(sheet.calculated_quantity),
+          pu_r: Number(sheet.pu_r),
+          amount: Number(sheet.amount),
+          isNew: false
         });
+      });
 
-        setSheets(grouped);
-        setSaveStatus('saved');
-        fetchNotifications();
-      } catch (err) {
-        console.error("Auto-save failed:", err);
-        setSaveStatus('error');
-      }
-    }, 800);
-
-    return () => clearTimeout(saveTimeout);
-  }, [sheets, saveStatus, date, loading]);
+      setSheets(grouped);
+      setDeletedItems([]);
+      fetchNotifications();
+      alert('Fiche technique enregistrée avec succès.');
+    } catch (err) {
+      console.error("Save failed:", err);
+      alert('Erreur lors de la sauvegarde.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   // Update people count for a meal
   const handlePeopleCountChange = (mealType, count) => {
@@ -272,8 +260,6 @@ const FicheTechniqueModal = ({ selectedMenu, onClose, date, dayText }) => {
       next[mealType] = newMealPlats;
       return next;
     });
-
-    setSaveStatus('dirty');
   };
 
   // Update row values
@@ -301,19 +287,13 @@ const FicheTechniqueModal = ({ selectedMenu, onClose, date, dayText }) => {
       next[mealType][platName] = rowList;
       return next;
     });
-
-    setSaveStatus('dirty');
   };
 
-  const handleRemoveProduct = async (mealType, platName, idx) => {
+  const handleRemoveProduct = (mealType, platName, idx) => {
     const row = sheets[mealType][platName][idx];
     
     if (!row.isNew && row.id && !row.id.toString().startsWith('temp_')) {
-      try {
-        await api.delete(`/technical-sheets/${row.id}`);
-      } catch (err) {
-        console.error("Error deleting row:", err);
-      }
+      setDeletedItems(prev => [...prev, row.id]);
     }
 
     setSheets(prev => {
@@ -323,8 +303,6 @@ const FicheTechniqueModal = ({ selectedMenu, onClose, date, dayText }) => {
       next[mealType][platName] = rowList;
       return next;
     });
-
-    setSaveStatus('dirty');
   };
 
   // --- Modal Logic for Ingredient Selector ---
@@ -393,7 +371,6 @@ const FicheTechniqueModal = ({ selectedMenu, onClose, date, dayText }) => {
       return next;
     });
 
-    setSaveStatus('dirty');
     setIsIngredientModalOpen(false);
   };
 
@@ -555,30 +532,23 @@ const FicheTechniqueModal = ({ selectedMenu, onClose, date, dayText }) => {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            {/* Auto-save Status Badge */}
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: '8px',
-              padding: '8px 16px', borderRadius: '20px', fontSize: '12px', fontWeight: '700',
-              backgroundColor: saveStatus === 'saved' ? 'rgba(16,185,129,0.1)' : saveStatus === 'saving' ? 'rgba(59,130,246,0.1)' : 'rgba(234,88,12,0.1)',
-              color: saveStatus === 'saved' ? '#34d399' : saveStatus === 'saving' ? '#60a5fa' : '#fb923c',
-              border: `1px solid ${saveStatus === 'saved' ? 'rgba(16,185,129,0.2)' : saveStatus === 'saving' ? 'rgba(59,130,246,0.2)' : 'rgba(234,88,12,0.2)'}`
-            }}>
-              <span style={{
-                width: '6px', height: '6px', borderRadius: '50%',
-                backgroundColor: saveStatus === 'saved' ? '#34d399' : saveStatus === 'saving' ? '#60a5fa' : '#fb923c',
-                display: 'inline-block',
-                animation: saveStatus === 'saving' ? 'pulse 1s infinite' : 'none'
-              }} />
-              {saveStatus === 'saved' ? (
-                <span>Enregistré automatiquement</span>
-              ) : saveStatus === 'saving' ? (
-                <span>Sauvegarde en cours...</span>
-              ) : saveStatus === 'error' ? (
-                <span>Erreur de sauvegarde</span>
-              ) : (
-                <span>Modifications en cours...</span>
-              )}
-            </div>
+            {/* Save Button */}
+            <button
+              onClick={handleSave}
+              disabled={isSaving}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '8px',
+                padding: '10px 16px', borderRadius: '12px', border: 'none',
+                background: isSaving ? '#94a3b8' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                color: 'white', fontSize: '13px', fontWeight: '700',
+                cursor: isSaving ? 'not-allowed' : 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(16,185,129,0.3)'
+              }}
+              onMouseEnter={e => !isSaving && (e.currentTarget.style.background = 'linear-gradient(135deg, #059669 0%, #10b981 100%)')}
+              onMouseLeave={e => !isSaving && (e.currentTarget.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)')}
+            >
+              {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
+              {isSaving ? 'Enregistrement...' : 'Enregistrer'}
+            </button>
 
             <button onClick={handleExportExcel}
               style={{

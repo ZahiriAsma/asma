@@ -22,6 +22,7 @@ class StockController extends Controller
     {
 
         return (float) TechnicalSheet::join('bordereau', 'technical_sheets.bordereau_id', '=', 'bordereau.id')
+            ->where('technical_sheets.statut', 'Validé')
             ->whereRaw('LOWER(TRIM(bordereau.service_description)) = LOWER(TRIM(?))', [$designation])
             ->sum('technical_sheets.calculated_quantity');
     }
@@ -29,6 +30,7 @@ class StockController extends Controller
     private function computeConsumedForPeriod(string $designation, string $startDate, string $endDate): float
     {
         return (float) TechnicalSheet::join('bordereau', 'technical_sheets.bordereau_id', '=', 'bordereau.id')
+            ->where('technical_sheets.statut', 'Validé')
             ->whereRaw('LOWER(TRIM(bordereau.service_description)) = LOWER(TRIM(?))', [$designation])
             ->whereBetween('technical_sheets.date', [$startDate, $endDate])
             ->sum('technical_sheets.calculated_quantity');
@@ -125,7 +127,9 @@ class StockController extends Controller
             $stock->statut              = $this->computeStatus($remaining, $available);
 
             return $stock;
-        });
+        })->filter(function ($stock) {
+            return $stock->quantite_disponible > 0;
+        })->values();
 
         return response()->json($stocks);
     }

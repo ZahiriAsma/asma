@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Plus, Filter, Folder, Calendar, DollarSign, Archive, FolderOpen,
   ChevronLeft, FileText, Printer, Download, Edit2, Trash2, Eye, Search, X, Check, ChevronDown, Package
@@ -124,6 +124,8 @@ const MarchesContent = () => {
   const [activeMarchesTab, setActiveMarchesTab] = useState('actifs');
   const [submitting, setSubmitting] = useState(false);
   const [selectedMarche, setSelectedMarche] = useState(null);
+  // Ref so async callbacks (fetchMarches) always read the latest selectedMarche
+  const selectedMarcheRef = useRef(null);
   const [activeDocTab, setActiveDocTab] = useState('bc');
 
   // Dynamic state for Bons de commande documents (now loaded from database)
@@ -370,6 +372,11 @@ const MarchesContent = () => {
     }
   };
 
+  // Keep ref in sync with selectedMarche so async fetchMarches always reads latest value
+  useEffect(() => {
+    selectedMarcheRef.current = selectedMarche;
+  }, [selectedMarche]);
+
   useEffect(() => {
     fetchMarches(); // Will set loading to false as soon as it finishes
     fetchAttachments();
@@ -419,6 +426,12 @@ const MarchesContent = () => {
       const response = await api.get('/marches');
       setMarches(response.data);
       setLoading(false);
+      // Use ref so this always reads the CURRENT selectedMarche, even from a stale closure
+      const currentSelected = selectedMarcheRef.current;
+      if (currentSelected) {
+        const refreshed = response.data.find(m => m.id === currentSelected.id);
+        if (refreshed) setSelectedMarche(refreshed);
+      }
     } catch (error) {
       console.error('Erreur de chargement', error.response || error);
       alert("Erreur de chargement des marchés: " + (error.response?.data?.message || error.message));
@@ -687,6 +700,7 @@ const MarchesContent = () => {
     try {
       const payload = {
         ...newBcData,
+        statut: 'Validé', // Auto-finalize BC
         fournisseur_id: newBcData.fournisseur_id || selectedMarche?.id_fournisseur || null,
         marche_id: selectedMarche ? selectedMarche.id : null,
         referenceMarcheCadre: newBcData.referenceMarcheCadre
@@ -1009,7 +1023,7 @@ const MarchesContent = () => {
         total_ttc: parseFloat(newBlData.montantTTC),
         type: newBlData.type,
         items: newBlData.items,
-        statut: newBlData.statut
+        statut: 'Validé' // Auto-finalize BL
       };
 
       if (editingBl) {
@@ -1040,6 +1054,8 @@ const MarchesContent = () => {
         items: []
       });
       setShowBlModal(false);
+      // Refresh marches so consomme_amount and progress_percent update automatically
+      fetchMarches();
     } catch (error) {
       console.error("Erreur lors de la sauvegarde du bon de livraison", error.response || error);
       alert("Erreur: " + (error.response?.data?.message || error.message));
@@ -1051,6 +1067,8 @@ const MarchesContent = () => {
       try {
         await api.delete(`/bons-livraison/${id}`);
         setBls(bls.filter(bl => bl.id !== id));
+        // Refresh marches so consomme_amount and progress_percent update automatically
+        fetchMarches();
       } catch (error) {
         console.error("Erreur lors de la suppression du bon de livraison", error);
         alert("Erreur: " + (error.response?.data?.message || error.message));
@@ -1548,7 +1566,7 @@ const MarchesContent = () => {
                   montantHT: '0.00',
                   montantTVA: '0.00',
                   montantTTC: '0.00',
-                  statut: 'En cours',
+                  statut: 'Validé',
                   fournisseur_id: selectedMarche ? selectedMarche.id_fournisseur.toString() : '',
                   items: []
                 });
@@ -1720,30 +1738,7 @@ const MarchesContent = () => {
                 setEditingAttachmentGroup(null);
                 
                 const stockMap = {};
-                providerBls.forEach(bl => {
-                  (bl.items || []).forEach(item => {
-                    const designation = item.designation || item.service_description || item.description || item.name || '';
-                    if (!designation) return;
-                    
-                    if (!stockMap[designation]) {
-                      stockMap[designation] = {
-                        designation: designation,
-                        unite: item.unite || item.unit_of_measure || item.unit || 'U',
-                        quantite_initiale: 0
-                      };
-                    }
-                    stockMap[designation].quantite_initiale += parseFloat(item.qty || item.quantity || item.quantite || 0);
-                  });
-                });
-                
-                const newItems = Object.values(stockMap).map((item, idx) => ({
-                  numero_article: idx + 1,
-                  designation: item.designation,
-                  unite: item.unite,
-                  quantite_initiale: item.quantite_initiale,
-                  quantite: 0,
-                  taux_tva: 0
-                }));
+                const newItems = [];
 
                 setNewAttachmentData({
                   numero_attachment: attachments.length > 0 ? Math.max(...attachments.map(a => a.numero_attachment || 0)) + 1 : 1,
@@ -2623,7 +2618,7 @@ const MarchesContent = () => {
             <div>
               <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase', marginBottom: '4px' }}>Consommé</div>
               <div style={{ fontSize: '15px', fontWeight: '700', color: '#10b981' }}>
-                {consumedAmount.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} MAD
+                {consumedAmount.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} DH ({progressPercent}%)
               </div>
             </div>
             <div>
@@ -2998,7 +2993,7 @@ const MarchesContent = () => {
                         <div style={{ marginBottom: '20px' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: '600', marginBottom: '6px' }}>
                             <span style={{ color: '#64748b' }}>Consommé</span>
-                            <span style={{ color: '#0f766e' }}>{consumed.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} MAD ({progress}%)</span>
+                            <span style={{ color: '#0f766e' }}>{consumed.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} DH ({progress}%)</span>
                           </div>
                           <div style={{ width: '100%', height: '6px', backgroundColor: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
                             <div style={{ width: `${progress}%`, height: '100%', backgroundColor: '#0f766e', borderRadius: '3px' }}></div>
@@ -3296,18 +3291,6 @@ const MarchesContent = () => {
                     {fournisseurs.map(f => (
                       <option key={f.id} value={f.id}>{f.raisonSociale}</option>
                     ))}
-                  </select>
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Statut *</label>
-                  <select
-                    value={newBcData.statut}
-                    onChange={(e) => setNewBcData({ ...newBcData, statut: e.target.value })}
-                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', color: '#334155', backgroundColor: 'white' }}
-                  >
-                    <option value="En cours">En cours</option>
-                    <option value="Validé">Validé</option>
-                    <option value="Livré">Livré</option>
                   </select>
                 </div>
                 <div>
@@ -4261,6 +4244,38 @@ const MarchesContent = () => {
                   />
                 </div>
                 <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '8px' }}>Bon de Livraison *</label>
+                  <select
+                    value={newAttachmentData.bon_livraison_id || ''}
+                    onChange={(e) => {
+                      const blId = e.target.value;
+                      const selectedBl = providerBls.find(b => b.id.toString() === blId);
+                      let newItems = [];
+                      if (selectedBl && selectedBl.items) {
+                        newItems = selectedBl.items.map((item, idx) => {
+                          const qty = parseFloat(item.qty || item.quantity || item.quantite || 0);
+                          return {
+                            numero_article: idx + 1,
+                            designation: item.designation || item.service_description || item.description || item.name || '',
+                            unite: item.unite || item.unit_of_measure || item.unit || 'U',
+                            quantite_initiale: qty,
+                            quantite: qty,
+                            taux_tva: 0
+                          };
+                        });
+                      }
+                      setNewAttachmentData({ ...newAttachmentData, bon_livraison_id: blId, items: newItems });
+                    }}
+                    required
+                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', backgroundColor: 'white' }}
+                  >
+                    <option value="">-- Sélectionner un BL --</option>
+                    {providerBls.map(bl => (
+                      <option key={bl.id} value={bl.id}>{bl.numeroBL}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '8px' }}>N° Attachement *</label>
                   <input
                     type="number"
@@ -4376,6 +4391,10 @@ const MarchesContent = () => {
               <button type="button" onClick={() => setShowAttachmentModal(false)} className="btn-secondary" style={{ padding: '10px 20px' }}>Annuler</button>
               <button
                 onClick={async () => {
+                  if (!newAttachmentData.bon_livraison_id) {
+                    alert("Veuillez sélectionner un Bon de Livraison avant d'enregistrer.");
+                    return;
+                  }
                   try {
                     setSubmitting(true);
                     const payload = { ...newAttachmentData, marche_id: selectedMarche ? selectedMarche.id : null };
