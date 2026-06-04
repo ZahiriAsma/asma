@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import api from '../api/axios';
 
-const FournisseursContent = () => {
+const FournisseursContent = ({ onNavigateToMarches }) => {
   const [fournisseurs, setFournisseurs] = useState([]);
   const [marches, setMarches] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -404,6 +404,10 @@ const FournisseursContent = () => {
                   </button>
 
                   <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onNavigateToMarches) onNavigateToMarches(f.id);
+                    }}
                     style={{
                       flex: 1, backgroundColor: '#0f766e', border: 'none',
                       borderRadius: '8px', padding: '8px 12px', display: 'flex',

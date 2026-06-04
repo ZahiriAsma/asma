@@ -3,6 +3,7 @@ import { Lock, Eye, EyeOff, Loader2, CheckCircle, ArrowLeft, ShieldCheck, Langua
 import api from '../api/axios';
 import logo from '../assets/logo.png';
 import { useTranslation } from '../hooks/useTranslation';
+import useMediaQuery from '../hooks/useMediaQuery';
 
 const inputStyle = (focused) => ({
     width: '100%', boxSizing: 'border-box',
@@ -22,6 +23,7 @@ const labelStyle = {
 
 const ResetPasswordPage = () => {
     const { t, lang, isRtl, isDark, setSysConfig } = useTranslation();
+    const { isMobile } = useMediaQuery();
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token') || '';
     const emailParam = params.get('email') || '';
@@ -169,7 +171,7 @@ const ResetPasswordPage = () => {
                 <div style={{
                     background: 'rgba(10, 20, 35, 0.76)',
                     border: '1px solid rgba(255,255,255,0.12)',
-                    borderRadius: '24px', padding: '40px 36px',
+                    borderRadius: '24px', padding: isMobile ? '24px 20px' : '40px 36px',
                     boxSizing: 'border-box',
                     backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
                     textAlign: isRtl ? 'right' : 'left',

@@ -7,6 +7,7 @@ import {
 import api from '../api/axios';
 import * as XLSX from 'xlsx';
 import stockInitialLogo from '../assets/stock-initial-logo.png';
+import useMediaQuery from '../hooks/useMediaQuery';
 
 /* ─────────────────────────────────────────────────────────────
    Helper: status badge config

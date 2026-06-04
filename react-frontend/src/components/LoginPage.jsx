@@ -4,6 +4,7 @@ import api from '../api/axios';
 import logo from '../assets/logo.png';
 import cardBg from '../assets/login_bg.png';
 import { useTranslation } from '../hooks/useTranslation';
+import useMediaQuery from '../hooks/useMediaQuery';
 
 /* ─────────────── Input style (light, like the image) ─────────────── */
 const inputStyle = (focused) => ({
@@ -204,6 +205,8 @@ const ForgotModal = ({ onClose }) => {
 /* ─────────────── Main Login Page ─────────────── */
 const LoginPage = () => {
     const { t, lang, isRtl, isDark, setSysConfig, sysConfig } = useTranslation();
+    const { isMobile, isTablet } = useMediaQuery();
+    const isSmallScreen = isMobile || isTablet;
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -302,17 +305,17 @@ const LoginPage = () => {
                     width: '100%', maxWidth: '1200px',
                     margin: '0 auto',
                     display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: '40px',
-                    padding: '40px 48px',
+                    alignItems: isSmallScreen ? 'stretch' : 'center',
+                    justifyContent: isSmallScreen ? 'center' : 'space-between',
+                    gap: isMobile ? '24px' : '40px',
+                    padding: isMobile ? '24px 16px' : isTablet ? '32px 24px' : '40px 48px',
                     boxSizing: 'border-box',
                     flexWrap: 'wrap',
                     flexDirection: isRtl ? 'row-reverse' : 'row',
                 }}>
 
                     {/* ── LEFT: Branding & Features ── */}
-                    <div style={{ flex: 1, minWidth: '300px', color: '#ffffff', textAlign: isRtl ? 'right' : 'left' }}>
+                    <div style={{ flex: 1, minWidth: isMobile ? '100%' : '300px', color: '#ffffff', textAlign: isRtl ? 'right' : 'left' }}>
 
                         {/* Logo row */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '44px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
@@ -412,7 +415,7 @@ const LoginPage = () => {
                         background: 'rgba(10, 20, 35, 0.76)',
                         border: '1px solid rgba(255,255,255,0.12)',
                         borderRadius: '18px',
-                        padding: '36px 32px',
+                        padding: isMobile ? '24px 20px' : '36px 32px',
                         boxSizing: 'border-box',
                         backdropFilter: 'blur(22px)',
                         WebkitBackdropFilter: 'blur(22px)',

@@ -112,7 +112,7 @@ const numberToFrenchWords = (num) => {
   return result;
 };
 
-const MarchesContent = () => {
+const MarchesContent = ({ filterFournisseurId, onClearFournisseurFilter }) => {
   const [marches, setMarches] = useState([]);
   const [fournisseurs, setFournisseurs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -2947,13 +2947,22 @@ const MarchesContent = () => {
             </button>
           </div>
 
+          {filterFournisseurId && (
+            <div style={{ padding: '12px 16px', backgroundColor: '#e0f2fe', color: '#0369a1', borderRadius: '8px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>Affichage des marchés pour le fournisseur sélectionné</span>
+              <button onClick={onClearFournisseurFilter} style={{ background: 'none', border: 'none', color: '#0369a1', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 'bold' }}><X size={16} /> Effacer le filtre</button>
+            </div>
+          )}
+
           {/* Grid of Marches */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
 
             {loading ? (
               <p>Chargement des marchés...</p>
             ) : (
-              (activeMarchesTab === 'actifs' ? marches.filter(m => !m.is_archived) : marches.filter(m => m.is_archived)).map((marche) => {
+              (activeMarchesTab === 'actifs' ? marches.filter(m => !m.is_archived) : marches.filter(m => m.is_archived))
+                .filter(m => filterFournisseurId ? m.id_fournisseur == filterFournisseurId : true)
+                .map((marche) => {
                 const statusStyle = getStatusColor(marche.statut);
                 return (
                   <div key={marche.id} style={{

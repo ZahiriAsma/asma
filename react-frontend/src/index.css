@@ -31,6 +31,116 @@ body {
   animation: spin 1s linear infinite;
 }
 
+/* ═══════════════════════════════════════════════
+   RESPONSIVE UTILITIES
+   ═══════════════════════════════════════════════ */
+
+/* Sidebar overlay backdrop */
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 40;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+.sidebar-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Sidebar responsive wrapper */
+.sidebar-responsive {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s ease;
+}
+
+@media (max-width: 1024px) {
+  .sidebar-responsive {
+    position: fixed !important;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 50;
+    height: 100vh;
+    transform: translateX(-100%);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  }
+  
+  [dir="rtl"] .sidebar-responsive {
+    left: auto;
+    right: 0;
+    transform: translateX(100%);
+  }
+
+  .sidebar-responsive.active {
+    transform: translateX(0) !important;
+  }
+
+  /* Hamburger button needs to show */
+  .hamburger-btn {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  /* Close button inside sidebar on mobile */
+  .mobile-sidebar-close {
+    display: flex !important;
+    justify-content: flex-end;
+    padding: 12px 16px 0;
+  }
+}
+
+/* Hamburger button */
+.hamburger-btn {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  color: inherit;
+  transition: background-color 0.2s;
+}
+.hamburger-btn:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Smooth scrollbar for mobile */
+@media (max-width: 768px) {
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+  }
+
+  .hamburger-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Prevent hover sticky states on touch */
+  .stat-card:hover {
+    transform: none !important;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .hamburger-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
 /* Impression : uniquement la zone menu (pas sidebar / header dashboard) */
 .menus-print-only {
   display: none;

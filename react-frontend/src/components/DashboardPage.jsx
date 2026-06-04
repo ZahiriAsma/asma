@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   LayoutDashboard, FileText, Package, Users, BarChart3, CalendarDays, Settings, LogOut,
   FileSpreadsheet, AlertTriangle, ArrowRight, ChevronRight, Clock, AlertCircle, TrendingUp, Search, Bell, X,
-  PieChart as PieChartIcon
+  PieChart as PieChartIcon, Menu
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPieChart, Pie, Cell } from 'recharts';
 import MarchesContent from './MarchesContent';
@@ -14,6 +14,7 @@ import StockContent from './StockContent';
 import { useDashboard } from '../context/DashboardContext';
 import api from '../api/axios';
 import dashboardLogo from '../assets/dashboard-logo.jpg';
+import useMediaQuery from '../hooks/useMediaQuery';
 
 const CustomTooltip = ({ active, payload, label, isDark, clr }) => {
   if (active && payload && payload.length) {
@@ -59,11 +60,15 @@ const PieCustomTooltip = ({ active, payload, clr }) => {
 };
 
 const DashboardPage = () => {
+  const { isMobile, isTablet } = useMediaQuery();
+  const isMobileOrTablet = isMobile || isTablet;
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [localSearchQuery, setLocalSearchQuery] = useState('');
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [dashboardStats, setDashboardStats] = useState(null);
   const [loadingStats, setLoadingStats] = useState(true);
+  const [marchesFilterFournisseurId, setMarchesFilterFournisseurId] = useState(null);
 
   const {
     notifications,
@@ -276,7 +281,11 @@ const DashboardPage = () => {
   // Components for layout
   const NavItem = ({ id, icon: Icon, label, badge, indent = false }) => (
     <button
-      onClick={() => setActiveTab(id)}
+      onClick={() => { 
+        setActiveTab(id); 
+        setIsSidebarOpen(false); 
+        if (id === 'marches') setMarchesFilterFournisseurId(null);
+      }}
       style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         width: '100%', padding: '10px 16px',
@@ -428,10 +437,21 @@ const DashboardPage = () => {
         }
       `}</style>
 
-      <aside style={{
+      {/* Sidebar overlay backdrop */}
+      <div className={`sidebar-overlay ${isSidebarOpen ? 'active' : ''}`} onClick={() => setIsSidebarOpen(false)} />
+
+      <aside className={`sidebar-responsive ${isSidebarOpen ? 'active' : ''}`} style={{
         width: '260px', backgroundColor: clr.sidebar, color: 'white',
         display: 'flex', flexDirection: 'column', flexShrink: 0, transition: 'background-color 0.3s'
       }}>
+        {isMobileOrTablet && (
+          <div className="mobile-sidebar-close" style={{ display: 'none' }}>
+            <button onClick={() => setIsSidebarOpen(false)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '8px', borderRadius: '8px' }}>
+              <X size={20} />
+            </button>
+          </div>
+        )}
+
         {/* Brand */}
         <div style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{
@@ -469,11 +489,16 @@ const DashboardPage = () => {
 
         {/* Header */}
         <header style={{
-          backgroundColor: clr.header, padding: '16px 32px', display: 'flex',
+          backgroundColor: clr.header, padding: isMobile ? '12px 16px' : '16px 32px', display: 'flex',
           justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${clr.headerBorder}`,
           transition: 'background-color 0.3s, border-color 0.3s'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', fontSize: '13px', color: clr.textMuted, fontWeight: '500' }}>
+            {isMobileOrTablet && (
+              <button className="hamburger-btn" onClick={() => setIsSidebarOpen(true)} style={{ color: clr.text, marginRight: isRtl ? '0' : '12px', marginLeft: isRtl ? '12px' : '0' }}>
+                <Menu size={20} />
+              </button>
+            )}
             <span style={{ color: '#94a3b8' }}>InterNat Stock</span>
             <ChevronRight size={14} style={{ margin: '0 8px', transform: isRtl ? 'rotate(180deg)' : 'none' }} />
             <span style={{ color: clr.text, fontWeight: '600' }}>
@@ -486,9 +511,9 @@ const DashboardPage = () => {
             </span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '10px' : '20px' }}>
             {/* Search */}
-            <form onSubmit={handleSearch} style={{ position: 'relative', width: '320px' }}>
+            <form onSubmit={handleSearch} style={{ position: 'relative', width: isMobile ? '160px' : '320px' }}>
               <Search size={16} style={{ position: 'absolute', [isRtl ? 'right' : 'left']: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none' }} />
               <input
                 type="search"
@@ -721,13 +746,15 @@ const DashboardPage = () => {
         {/* Dashboard Body */}
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {activeTab === 'dashboard' && (
-            <div style={{ padding: '32px', maxWidth: '1200px', margin: '0 auto' }}>
+            <div style={{ padding: isMobile ? '16px' : '32px', maxWidth: '1200px', margin: '0 auto' }}>
 
               {/* Welcome Banner */}
               <div style={{
                 background: 'linear-gradient(135deg, #0f766e 0%, #10b981 100%)',
-                borderRadius: '16px', padding: '28px 32px', color: 'white',
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                borderRadius: '16px', padding: isMobile ? '20px 24px' : '28px 32px', color: 'white',
+                display: 'flex', flexDirection: isMobile ? 'column' : 'row',
+                gap: isMobile ? '16px' : '0',
+                justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center',
                 boxShadow: '0 10px 15px -3px rgba(16, 185, 129, 0.2)', marginBottom: '24px'
               }}>
                 <div>
@@ -743,7 +770,7 @@ const DashboardPage = () => {
               </div>
 
               {/* 4 Stat Cards */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '24px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : isTablet ? '1fr 1fr' : 'repeat(4, 1fr)', gap: '20px', marginBottom: '24px' }}>
                 {loadingStats ? (
                   <div style={{ gridColumn: '1 / -1', padding: '40px', textAlign: 'center', color: clr.textMuted }}>Chargement des statistiques...</div>
                 ) : (
@@ -800,7 +827,7 @@ const DashboardPage = () => {
                 )}
               </div>
               {/* Charts Section */}
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', marginBottom: '24px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobileOrTablet ? '1fr' : '2fr 1fr', gap: '20px', marginBottom: '24px' }}>
 
                 {/* Bar Chart — Budget Total vs Consommé par Marché */}
                 <div style={{ backgroundColor: clr.card, borderRadius: '16px', padding: '24px', border: `1px solid ${clr.cardBorder}`, boxShadow: '0 1px 2px rgba(0,0,0,0.02)', transition: 'background-color 0.3s, border-color 0.3s' }}>
@@ -958,8 +985,11 @@ const DashboardPage = () => {
             </div>
           )}
           {activeTab === 'stock' && <StockContent />}
-          {activeTab === 'marches' && <MarchesContent />}
-          {activeTab === 'fournisseurs' && <FournisseursContent />}
+          {activeTab === 'marches' && <MarchesContent filterFournisseurId={marchesFilterFournisseurId} onClearFournisseurFilter={() => setMarchesFilterFournisseurId(null)} />}
+          {activeTab === 'fournisseurs' && <FournisseursContent onNavigateToMarches={(fournisseurId) => {
+            setMarchesFilterFournisseurId(fournisseurId);
+            setActiveTab('marches');
+          }} />}
           {activeTab === 'bordereau' && <BordereauContent />}
           {activeTab === 'menus' && <MenusContent />}
           {activeTab === 'parametres' && <ParametresContent />}
