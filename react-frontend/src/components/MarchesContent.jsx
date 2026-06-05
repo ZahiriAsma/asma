@@ -2131,7 +2131,7 @@ const MarchesContent = ({ filterFournisseurId, onClearFournisseurFilter }) => {
     }
 
     if (activeDocTab === 'pv') {
-      const filteredPvs = pvs.filter(p => selectedMarche && p.marche_id == selectedMarche.id);
+      const filteredPvs = pvs.filter(p => providerBls.some(b => b.id == p.bon_livraison_id));
       
       return (
         <div>
@@ -3787,9 +3787,9 @@ const MarchesContent = ({ filterFournisseurId, onClearFournisseurFilter }) => {
                               <td style={{ padding: '8px 12px', color: '#334155', fontWeight: '500' }}>{item.service_description || item.designation || '—'}</td>
                               <td style={{ padding: '8px 12px', textAlign: 'center', color: '#64748b' }}>{item.unit_of_measure || '—'}</td>
                               <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: '700', color: '#0f172a' }}>{qty}</td>
-                              <td style={{ padding: '8px 12px', textAlign: 'right' }}>{pu.toFixed(2)}</td>
+                              <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: '600', color: '#2563eb' }}>{pu.toFixed(2)}</td>
                               <td style={{ padding: '8px 12px', textAlign: 'right', color: '#64748b' }}>{vat}%</td>
-                              <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: '600' }}>{lineHt.toFixed(2)}</td>
+                              <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: '700', color: '#0f766e' }}>{lineHt.toFixed(2)}</td>
                             </tr>
                           );
                         })
@@ -4269,7 +4269,7 @@ const MarchesContent = ({ filterFournisseurId, onClearFournisseurFilter }) => {
                             unite: item.unite || item.unit_of_measure || item.unit || 'U',
                             quantite_initiale: qty,
                             quantite: qty,
-                            taux_tva: 0
+                            taux_tva: item.vat_rate || item.taux_tva || 20
                           };
                         });
                       }
@@ -4343,7 +4343,7 @@ const MarchesContent = ({ filterFournisseurId, onClearFournisseurFilter }) => {
                       <th style={{ padding: '8px', textAlign: 'left' }}>Désignation</th>
                       <th style={{ padding: '8px', textAlign: 'left', width: '80px' }}>Unité</th>
                       <th style={{ padding: '8px', textAlign: 'left', width: '100px' }}>Qté Initiale</th>
-                      <th style={{ padding: '8px', textAlign: 'left', width: '100px' }}>Qté Consommée</th>
+                      <th style={{ padding: '8px', textAlign: 'left', width: '100px' }}>Taux TVA (%)</th>
                       <th style={{ padding: '8px', width: '40px' }}></th>
                     </tr>
                   </thead>
@@ -4375,9 +4375,9 @@ const MarchesContent = ({ filterFournisseurId, onClearFournisseurFilter }) => {
                           <input type="number" disabled value={item.quantite_initiale || 0} style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '4px', backgroundColor: '#f1f5f9' }} />
                         </td>
                         <td style={{ padding: '12px' }}>
-                          <input type="number" value={item.quantite} onChange={(e) => {
+                          <input type="number" value={item.taux_tva} onChange={(e) => {
                             const newItems = [...newAttachmentData.items];
-                            newItems[idx].quantite = e.target.value;
+                            newItems[idx].taux_tva = e.target.value;
                             setNewAttachmentData({ ...newAttachmentData, items: newItems });
                           }} style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
                         </td>
@@ -4983,7 +4983,7 @@ const MarchesContent = ({ filterFournisseurId, onClearFournisseurFilter }) => {
                   disabled={!!editingConformite}
                 >
                   <option value="">Sélectionnez un BL ayant un PV de Réception</option>
-                  {pvs.filter(p => selectedMarche && p.marche_id == selectedMarche.id).map(pv => {
+                  {pvs.filter(p => providerBls.some(b => b.id == p.bon_livraison_id)).map(pv => {
                     const bl = providerBls.find(b => b.id == pv.bon_livraison_id);
                     return (
                       <option key={pv.id} value={pv.id}>
@@ -5126,6 +5126,7 @@ const MarchesContent = ({ filterFournisseurId, onClearFournisseurFilter }) => {
                         <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700', color: '#64748b' }}>Désignation</th>
                         <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: '700', color: '#64748b' }}>Unité</th>
                         <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: '700', color: '#64748b' }}>Quantité</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: '700', color: '#64748b' }}>Taux TVA (%)</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -5137,6 +5138,9 @@ const MarchesContent = ({ filterFournisseurId, onClearFournisseurFilter }) => {
                           </td>
                           <td style={{ padding: '8px 12px', textAlign: 'center' }}>
                             <span style={{ backgroundColor: '#fef3c7', color: '#d97706', border: '1px solid #fde68a', padding: '2px 8px', borderRadius: '20px', fontSize: '11px', fontWeight: '700' }}>{item.quantite || item.quantity || '0'}</span>
+                          </td>
+                          <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                            <span style={{ backgroundColor: '#e0e7ff', color: '#4f46e5', border: '1px solid #c7d2fe', padding: '2px 8px', borderRadius: '20px', fontSize: '11px', fontWeight: '700' }}>{item.taux_tva || '0'}%</span>
                           </td>
                         </tr>
                       ))}

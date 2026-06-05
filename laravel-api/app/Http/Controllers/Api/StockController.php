@@ -53,33 +53,38 @@ class StockController extends Controller
      */
     private function getDynamicBLQuantitiesAndSyncProducts(): array
     {
+        // Fetch ALL validated BLs regardless of marche_id
         $bls = BonLivraison::where('statut', 'Validé')->get();
         $blQuantities = [];
 
         foreach ($bls as $bl) {
-            $items = $bl->items ?? [];
+            $items = is_string($bl->items) ? json_decode($bl->items, true) : ($bl->items ?? []);
             foreach ($items as $item) {
                 $designation = trim($item['service_description'] ?? ($item['designation'] ?? ($item['label'] ?? '')));
-                $unite = trim($item['unit_of_measure'] ?? ($item['unit'] ?? 'Unité'));
-                $qty = (float)($item['qty'] ?? ($item['quantity'] ?? 0));
-                $ref = isset($item['price_number']) ? trim((string)$item['price_number']) : null;
+                $unite       = trim($item['unit_of_measure'] ?? ($item['unit'] ?? 'Unité'));
+                $qty         = (float)($item['qty'] ?? ($item['quantity'] ?? 0));
+                $ref         = isset($item['price_number']) ? trim((string)$item['price_number']) : null;
 
-                if (empty($designation)) continue;
+                if (empty($designation) || $qty <= 0) continue;
 
-                $key = strtolower($designation);
+                // Use mb_strtolower to handle special chars like œ, é, etc.
+                $key = mb_strtolower(trim($designation));
+
                 if (!isset($blQuantities[$key])) {
                     $blQuantities[$key] = [
                         'designation' => $designation,
-                        'unite' => $unite,
-                        'qty' => 0,
-                        'reference' => $ref,
-                        'last_date' => $bl->date_bl
+                        'unite'       => $unite,
+                        'qty'         => 0,
+                        'reference'   => $ref,
+                        'last_date'   => $bl->date_bl ?? date('Y-m-d'),
                     ];
                 }
-                
+
                 $blQuantities[$key]['qty'] += $qty;
-                if ($bl->date_bl > $blQuantities[$key]['last_date']) {
-                    $blQuantities[$key]['last_date'] = $bl->date_bl;
+
+                $blDate = $bl->date_bl ?? date('Y-m-d');
+                if ($blDate > $blQuantities[$key]['last_date']) {
+                    $blQuantities[$key]['last_date'] = $blDate;
                 }
                 if (empty($blQuantities[$key]['reference']) && !empty($ref)) {
                     $blQuantities[$key]['reference'] = $ref;
@@ -87,21 +92,19 @@ class StockController extends Controller
             }
         }
 
-        // Ensure all products from validated BLs exist in the stocks table
+        // Ensure every BL product exists as a stock row
         foreach ($blQuantities as $key => $data) {
-            // Search priority:
-            // 1. By designation (case-insensitive)
-            $stock = Stock::whereRaw('LOWER(TRIM(designation)) = ?', [$key])->first();
+            // Match ONLY by designation (mb_strtolower) because reference (price_number) is not globally unique
+            $stock = Stock::all()->first(function ($s) use ($key) {
+                return mb_strtolower(trim($s->designation)) === $key;
+            });
 
-            // 2. By reference if available
-            if (!$stock && !empty($data['reference'])) {
-                $stock = Stock::where('reference', $data['reference'])->first();
-            }
-
-            // 3. Fallback: Search bordereau reference if reference was empty
+            // 3. Lookup reference from bordereau table
             $reference = $data['reference'];
             if (empty($reference)) {
-                $bordereauItem = \App\Models\Bordereau::whereRaw('LOWER(TRIM(service_description)) = ?', [$key])->first();
+                $bordereauItem = \App\Models\Bordereau::all()->first(function ($b) use ($key) {
+                    return mb_strtolower(trim($b->service_description)) === $key;
+                });
                 if ($bordereauItem) {
                     $reference = $bordereauItem->price_number;
                 }
@@ -109,14 +112,13 @@ class StockController extends Controller
 
             if (!$stock) {
                 Stock::create([
-                    'reference' => $reference,
-                    'designation' => $data['designation'],
-                    'unite' => $data['unite'],
+                    'reference'        => $reference,
+                    'designation'      => $data['designation'],
+                    'unite'            => $data['unite'],
                     'quantite_initiale' => 0,
-                    'last_entry_date' => $data['last_date']
+                    'last_entry_date'  => $data['last_date'],
                 ]);
             } else {
-                // Update properties if empty
                 $updated = false;
                 if (empty($stock->reference) && !empty($reference)) {
                     $stock->reference = $reference;
@@ -130,9 +132,7 @@ class StockController extends Controller
                     $stock->last_entry_date = $data['last_date'];
                     $updated = true;
                 }
-                if ($updated) {
-                    $stock->save();
-                }
+                if ($updated) $stock->save();
             }
         }
 
@@ -141,23 +141,20 @@ class StockController extends Controller
 
     public function index()
     {
-        // 1. Sync products & get dynamic BL quantities
+        // 1. Sync ALL products from ALL validated BLs (all marches) & get quantities
         $blQuantities = $this->getDynamicBLQuantitiesAndSyncProducts();
 
-        // 2. Map all stocks and calculate dynamically
+        // 2. Re-fetch stocks after sync (to include newly created rows)
         $stocks = Stock::orderBy('designation', 'asc')->get()->map(function ($stock) use ($blQuantities) {
-            $key = strtolower(trim($stock->designation));
+            $key    = mb_strtolower(trim($stock->designation));
             $qty_bl = $blQuantities[$key]['qty'] ?? 0;
 
-            // Formule :
-            // Disponible = Stock Initial (quantite_initiale) + Reçu (from Validated BLs)
-            // Consommé = computeConsumed
-            // Restant = Disponible - Consommé
-            $available  = round((float) $stock->quantite_initiale + $qty_bl, 3);
-            $consumed   = round($this->computeConsumed($stock->designation), 3);
-            $remaining  = round($available - $consumed, 3);
+            // Qté Initiale (affichée) = stock initial + reçu BL
+            $available = round((float) $stock->quantite_initiale + $qty_bl, 3);
+            $consumed  = round($this->computeConsumed($stock->designation), 3);
+            $remaining = round($available - $consumed, 3);
 
-            $stock->quantite_recue       = $qty_bl;
+            $stock->quantite_recue      = $qty_bl;
             $stock->quantite_disponible = $available;
             $stock->quantite_consommee  = $consumed;
             $stock->quantite_restante   = $remaining;
@@ -165,7 +162,8 @@ class StockController extends Controller
 
             return $stock;
         })->filter(function ($stock) {
-            return $stock->quantite_disponible > 0;
+            // Show product if it has any quantity (initial OR received from BL)
+            return $stock->quantite_disponible > 0 || $stock->quantite_recue > 0;
         })->values();
 
         return response()->json($stocks);
@@ -193,17 +191,9 @@ class StockController extends Controller
 
                 $key = strtolower($designation);
 
-                // Search priority:
-                // 1. By reference in stocks (if reference is provided)
-                $stock = null;
-                if (!empty($ref)) {
-                    $stock = Stock::where('reference', $ref)->first();
-                }
-
-                // 2. By designation (case-insensitive)
-                if (!$stock) {
-                    $stock = Stock::whereRaw('LOWER(TRIM(designation)) = ?', [$key])->first();
-                }
+                $stock = Stock::all()->first(function ($s) use ($key) {
+                    return mb_strtolower(trim($s->designation)) === $key;
+                });
 
                 // 3. Fallback: check bordereau price_number (reference)
                 $reference = $ref;
@@ -254,14 +244,14 @@ class StockController extends Controller
         $blQuantities = $this->getDynamicBLQuantitiesAndSyncProducts();
 
         $stocks = Stock::orderBy('designation', 'asc')->get()->map(function ($stock) use ($startDate, $endDate, $blQuantities) {
-            $key = strtolower(trim($stock->designation));
+            $key    = mb_strtolower(trim($stock->designation));
             $qty_bl = $blQuantities[$key]['qty'] ?? 0;
 
             $available = round((float) $stock->quantite_initiale + $qty_bl, 3);
             $consumed  = round($this->computeConsumedForPeriod($stock->designation, $startDate, $endDate), 3);
             $remaining = round($available - $consumed, 3);
 
-            $stock->quantite_recue       = $qty_bl;
+            $stock->quantite_recue      = $qty_bl;
             $stock->quantite_disponible = $available;
             $stock->quantite_consommee  = $consumed;
             $stock->quantite_restante   = $remaining;
@@ -269,7 +259,7 @@ class StockController extends Controller
 
             return $stock;
         })->filter(function ($stock) {
-            return $stock->quantite_disponible > 0;
+            return $stock->quantite_disponible > 0 || $stock->quantite_recue > 0;
         })->values();
 
         $spreadsheet = new Spreadsheet();
@@ -285,43 +275,39 @@ class StockController extends Controller
         $sheet->getColumnDimension('B')->setWidth(15); // Référence
         $sheet->getColumnDimension('C')->setWidth(10); // Unité
         $sheet->getColumnDimension('D')->setWidth(15); // Qté Initiale
-        $sheet->getColumnDimension('E')->setWidth(15); // Qté Reçue
-        $sheet->getColumnDimension('F')->setWidth(15); // Qté Disponible
-        $sheet->getColumnDimension('G')->setWidth(15); // Qté Consommée
-        $sheet->getColumnDimension('H')->setWidth(15); // Qté Restante
-        $sheet->getColumnDimension('I')->setWidth(18); // Statut
+        $sheet->getColumnDimension('E')->setWidth(15); // Qté Consommée
+        $sheet->getColumnDimension('F')->setWidth(15); // Qté Restante
+        $sheet->getColumnDimension('G')->setWidth(18); // Statut
 
         $sheet->setCellValue('A1', 'ÉTAT DU STOCK / INVENTAIRE');
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
         $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-        $sheet->mergeCells('A1:I1');
+        $sheet->mergeCells('A1:G1');
 
         $sheet->setCellValue('A2', 'Période du ' . date('d/m/Y', strtotime($startDate)) . ' au ' . date('d/m/Y', strtotime($endDate)));
         $sheet->getStyle('A2')->getFont()->setItalic(true)->setSize(12);
         $sheet->getStyle('A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-        $sheet->mergeCells('A2:I2');
+        $sheet->mergeCells('A2:G2');
 
         $sheet->setCellValue('A3', 'Généré le : ' . date('d/m/Y à H:i'));
         $sheet->getStyle('A3')->getFont()->setItalic(true)->setSize(10)->getColor()->setARGB('FF64748B');
         $sheet->getStyle('A3')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-        $sheet->mergeCells('A3:I3');
+        $sheet->mergeCells('A3:G3');
 
         $headers = [
             'A5' => 'Désignation Produit',
             'B5' => 'Référence',
             'C5' => 'Unité',
             'D5' => 'Qté Initiale',
-            'E5' => 'Qté Reçue (BL)',
-            'F5' => 'Qté Disponible',
-            'G5' => 'Qté Consommée (Fiches Tech.)',
-            'H5' => 'Qté Restante',
-            'I5' => 'Statut',
+            'E5' => 'Qté Consommée (Fiches Tech.)',
+            'F5' => 'Qté Restante',
+            'G5' => 'Statut',
         ];
         foreach ($headers as $cell => $value) {
             $sheet->setCellValue($cell, $value);
         }
 
-        $headerStyle = $sheet->getStyle('A5:I5');
+        $headerStyle = $sheet->getStyle('A5:G5');
         $headerStyle->getFont()->setBold(true)->setSize(11)->getColor()->setARGB('FFFFFFFF');
         $headerStyle->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FF0F766E');
         $headerStyle->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
@@ -334,28 +320,26 @@ class StockController extends Controller
             $sheet->setCellValue('A' . $currentRow, $stock->designation);
             $sheet->setCellValue('B' . $currentRow, $stock->reference ?: '—');
             $sheet->setCellValue('C' . $currentRow, $stock->unite);
-            $sheet->setCellValue('D' . $currentRow, $stock->quantite_initiale);
-            $sheet->setCellValue('E' . $currentRow, $stock->quantite_recue);
-            $sheet->setCellValue('F' . $currentRow, $stock->quantite_disponible);
-            $sheet->setCellValue('G' . $currentRow, $stock->quantite_consommee);
-            $sheet->setCellValue('H' . $currentRow, $stock->quantite_restante);
-            $sheet->setCellValue('I' . $currentRow, $stock->statut);
+            $sheet->setCellValue('D' . $currentRow, $stock->quantite_disponible);
+            $sheet->setCellValue('E' . $currentRow, $stock->quantite_consommee);
+            $sheet->setCellValue('F' . $currentRow, $stock->quantite_restante);
+            $sheet->setCellValue('G' . $currentRow, $stock->statut);
 
             $sheet->getStyle('A' . $currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
-            $sheet->getStyle('B' . $currentRow . ':I' . $currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            $sheet->getStyle('A' . $currentRow . ':I' . $currentRow)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+            $sheet->getStyle('B' . $currentRow . ':G' . $currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle('A' . $currentRow . ':G' . $currentRow)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
 
             $rowBg = $isEven ? 'FFF8FAFC' : 'FFFFFFFF';
-            $sheet->getStyle('A' . $currentRow . ':I' . $currentRow)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB($rowBg);
+            $sheet->getStyle('A' . $currentRow . ':G' . $currentRow)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB($rowBg);
 
             if ($stock->quantite_restante <= 0) {
-                $sheet->getStyle('H' . $currentRow . ':I' . $currentRow)->getFont()->getColor()->setARGB('FFDC2626');
-                $sheet->getStyle('H' . $currentRow . ':I' . $currentRow)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFFEE2E2');
+                $sheet->getStyle('F' . $currentRow . ':G' . $currentRow)->getFont()->getColor()->setARGB('FFDC2626');
+                $sheet->getStyle('F' . $currentRow . ':G' . $currentRow)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFFEE2E2');
             } elseif ($stock->statut === 'Stock Faible') {
-                $sheet->getStyle('H' . $currentRow . ':I' . $currentRow)->getFont()->getColor()->setARGB('FFD97706');
-                $sheet->getStyle('H' . $currentRow . ':I' . $currentRow)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFFEF3C7');
+                $sheet->getStyle('F' . $currentRow . ':G' . $currentRow)->getFont()->getColor()->setARGB('FFD97706');
+                $sheet->getStyle('F' . $currentRow . ':G' . $currentRow)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFFEF3C7');
             } else {
-                $sheet->getStyle('I' . $currentRow)->getFont()->getColor()->setARGB('FF16A34A');
+                $sheet->getStyle('G' . $currentRow)->getFont()->getColor()->setARGB('FF16A34A');
             }
 
             $sheet->getRowDimension($currentRow)->setRowHeight(20);
@@ -367,12 +351,10 @@ class StockController extends Controller
         $sheet->setCellValue('D' . $totalsRow, '=SUM(D6:D' . ($totalsRow - 1) . ')');
         $sheet->setCellValue('E' . $totalsRow, '=SUM(E6:E' . ($totalsRow - 1) . ')');
         $sheet->setCellValue('F' . $totalsRow, '=SUM(F6:F' . ($totalsRow - 1) . ')');
-        $sheet->setCellValue('G' . $totalsRow, '=SUM(G6:G' . ($totalsRow - 1) . ')');
-        $sheet->setCellValue('H' . $totalsRow, '=SUM(H6:H' . ($totalsRow - 1) . ')');
-        $sheet->getStyle('A' . $totalsRow . ':I' . $totalsRow)->getFont()->setBold(true)->setSize(11);
-        $sheet->getStyle('A' . $totalsRow . ':I' . $totalsRow)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFE2E8F0');
-        $sheet->getStyle('A' . $totalsRow . ':I' . $totalsRow)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_MEDIUM);
-        $sheet->getStyle('D' . $totalsRow . ':H' . $totalsRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('A' . $totalsRow . ':G' . $totalsRow)->getFont()->setBold(true)->setSize(11);
+        $sheet->getStyle('A' . $totalsRow . ':G' . $totalsRow)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFE2E8F0');
+        $sheet->getStyle('A' . $totalsRow . ':G' . $totalsRow)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_MEDIUM);
+        $sheet->getStyle('D' . $totalsRow . ':F' . $totalsRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
         $writer   = new Xlsx($spreadsheet);
         $filename = 'Inventaire_Stock_' . date('Y_m_d') . '.xlsx';

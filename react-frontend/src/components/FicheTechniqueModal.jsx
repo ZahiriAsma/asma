@@ -28,7 +28,7 @@ const FicheTechniqueModal = ({ selectedMenu, onClose, date, dayText }) => {
   
   // The plats available for each meal based on the menu text
   const [platsPerMeal, setPlatsPerMeal] = useState({ breakfast: [], lunch: [], dinner: [] });
-  const [peopleCounts, setPeopleCounts] = useState({ breakfast: 450, lunch: 450, dinner: 450 });
+  const [peopleCounts, setPeopleCounts] = useState({ breakfast: 70, lunch: 70, dinner: 70 });
   
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -44,7 +44,7 @@ const FicheTechniqueModal = ({ selectedMenu, onClose, date, dayText }) => {
   // Set of ingredient IDs selected in the current modal session
   const [tempSelectedIngredients, setTempSelectedIngredients] = useState(new Set());
 
-  const defaultResidents = selectedMenu?.residents || 450;
+  const defaultResidents = selectedMenu?.residents || 70;
 
   // Compute overall summary totals
   const totalAmount = useMemo(() => {

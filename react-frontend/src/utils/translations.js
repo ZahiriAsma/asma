@@ -31,7 +31,7 @@ export const translations = {
       forgotPassword: "Mot de passe oublié ?",
       submit: "Se connecter",
       loggingIn: "Connexion en cours...",
-      errorInvalid: "Identifiants incorrects. Veuillez réessayer.",
+errorInvalid: "Les identifiants fournis sont incorrects. Veuillez réessayer.",
       errorServer: "Erreur de connexion au serveur.",
       emailRequired: "L'e-mail est requis.",
       passwordRequired: "Le mot de passe est requis."

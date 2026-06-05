@@ -502,8 +502,6 @@ const StockContent = () => {
                     { label: 'Désignation Produit', align: 'left' },
                     { label: 'Unité', align: 'center', width: '80px' },
                     { label: 'Qté Initiale', align: 'center' },
-                    { label: 'Qté Reçue (BL)', align: 'center' },
-                    { label: 'Qté Disponible', align: 'center' },
                     { label: 'Qté Consommée', align: 'center' },
                     { label: 'Qté Restante', align: 'center' },
                     { label: 'Statut', align: 'center' },
@@ -582,19 +580,9 @@ const StockContent = () => {
                           </span>
                         </td>
 
-                        {/* Qté Initiale */}
+                        {/* Qté Initiale (Stock Initial + BL) */}
                         <td style={{ padding: '14px 16px', textAlign: 'center', fontSize: '13px', color: '#475569', fontWeight: '600' }}>
-                          {initiale.toLocaleString('fr-FR', { maximumFractionDigits: 3 })}
-                        </td>
-
-                        {/* Qté Reçue */}
-                        <td style={{ padding: '14px 16px', textAlign: 'center', fontSize: '13px', color: '#0284c7', fontWeight: '600' }}>
-                          {recue > 0 ? recue.toLocaleString('fr-FR', { maximumFractionDigits: 3 }) : '—'}
-                        </td>
-
-                        {/* Qté Disponible */}
-                        <td style={{ padding: '14px 16px', textAlign: 'center', fontSize: '13px', color: '#10b981', fontWeight: '700' }}>
-                          {disponible.toLocaleString('fr-FR', { maximumFractionDigits: 3 })}
+                          {(initiale + recue).toLocaleString('fr-FR', { maximumFractionDigits: 3 })}
                         </td>
 
                         {/* Qté Consommée */}
@@ -626,7 +614,7 @@ const StockContent = () => {
                   })
                 ) : (
                   <tr>
-                    <td colSpan="11" style={{ padding: '60px', textAlign: 'center', color: '#94a3b8' }}>
+                    <td colSpan="9" style={{ padding: '60px', textAlign: 'center', color: '#94a3b8' }}>
                       <Package size={40} style={{ margin: '0 auto 12px', display: 'block', opacity: 0.3 }} />
                       <p style={{ margin: 0, fontWeight: '600', fontSize: '14px' }}>
                         {searchTerm || statusFilter !== 'all'
@@ -653,7 +641,7 @@ const StockContent = () => {
               {stocks.length !== filteredStocks.length && ` sur ${stocks.length}`}
             </span>
             <span style={{ fontSize: '11px', color: '#94a3b8' }}>
-              Formule : Qté Restante = Qté Initiale + Qté Reçue (BL) - Qté Consommée (FT)
+              Formule : Qté Restante = Qté Initiale - Qté Consommée (FT)
             </span>
           </div>
         )}

@@ -178,7 +178,7 @@ class AttachmentBcController extends Controller
         $sheet->setCellValue('B12', 'DESIGNATIONS ET REFERENCES');
         $sheet->setCellValue('C12', 'UNITE');
         $sheet->setCellValue('D12', 'QTE INITIALE');
-        $sheet->setCellValue('E12', 'QTE CONSOMMEE');
+        $sheet->setCellValue('E12', 'TAUX TVA (%)');
 
         $sheet->getStyle('A12:E12')->getFont()->setBold(true)->setSize(9);
         $sheet->getStyle('A12:E12')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
@@ -194,7 +194,7 @@ class AttachmentBcController extends Controller
             $sheet->setCellValue('C' . $currentRow, $item['unite'] ?? $item['unit_of_measure'] ?? 'U');
             $sheet->setCellValue('D' . $currentRow, $item['quantite_initiale'] ?? 0);
             
-            $sheet->setCellValue('E' . $currentRow, $item['quantite'] ?? $item['qty'] ?? 1);
+            $sheet->setCellValue('E' . $currentRow, $item['taux_tva'] ?? 20);
 
             // Alignments
             $sheet->getStyle('A' . $currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);

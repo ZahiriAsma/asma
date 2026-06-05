@@ -100,7 +100,7 @@ const MenusContent = () => {
     petit_dejeuner: '',
     dejeuner: '',
     diner: '',
-    residents: 450,
+    residents: 70,
     kcal_pd: 620,
     kcal_dej: 820,
     kcal_din: 580
@@ -218,33 +218,47 @@ const MenusContent = () => {
   const handleOpenEditModal = () => {
     if (selectedMenu) {
       setEditFormData({
-        petit_dejeuner: selectedMenu.petit_dejeuner,
-        dejeuner: selectedMenu.dejeuner,
-        diner: selectedMenu.diner,
-        residents: selectedMenu.residents,
-        kcal_pd: selectedMenu.kcal_pd,
-        kcal_dej: selectedMenu.kcal_dej,
-        kcal_din: selectedMenu.kcal_din
+        petit_dejeuner: selectedMenu.petit_dejeuner || '',
+        dejeuner: selectedMenu.dejeuner || '',
+        diner: selectedMenu.diner || '',
+        residents: selectedMenu.residents || 70,
+        kcal_pd: selectedMenu.kcal_pd || 620,
+        kcal_dej: selectedMenu.kcal_dej || 820,
+        kcal_din: selectedMenu.kcal_din || 580
       });
-      setIsEditModalOpen(true);
+    } else {
+      setEditFormData({
+        petit_dejeuner: '',
+        dejeuner: '',
+        diner: '',
+        residents: 70,
+        kcal_pd: 620,
+        kcal_dej: 820,
+        kcal_din: 580
+      });
     }
+    setIsEditModalOpen(true);
   };
-
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedMenu) return;
     try {
       setSaving(true);
-      const res = await api.put(`/menus/${selectedMenu.id}`, editFormData);
-
-      setMenus((prev) => prev.map((m) => (m.id === selectedMenu.id ? res.data.menu : m)));
-
-
+      if (selectedMenu) {
+        const res = await api.put(`/menus/${selectedMenu.id}`, editFormData);
+        setMenus((prev) => prev.map((m) => (m.id === selectedMenu.id ? res.data.menu : m)));
+      } else {
+        const selectedDay = daysInfo[selectedDayIndex];
+        const res = await api.post(`/menus`, {
+          ...editFormData,
+          date: selectedDay.iso
+        });
+        setMenus((prev) => [...prev, res.data.menu]);
+      }
       setIsEditModalOpen(false);
     } catch (err) {
-      console.error('Erreur lors de la mise à jour du menu:', err);
-      alert('Erreur de mise à jour');
+      console.error('Erreur lors de la sauvegarde du menu:', err);
+      alert('Erreur de sauvegarde');
     } finally {
       setSaving(false);
     }
@@ -738,7 +752,7 @@ const MenusContent = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
             <FileText size={20} color="#0f766e" />
             <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#0f172a' }}>
-              Besoin total – {getSelectedDayFullText()} ({selectedMenu ? selectedMenu.residents : 450} résidents)
+              Besoin total – {getSelectedDayFullText()} ({selectedMenu ? selectedMenu.residents : 70} résidents)
             </h3>
           </div>
 
@@ -876,29 +890,8 @@ const MenusContent = () => {
             <form onSubmit={handleEditSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
               <p style={{ margin: 0, fontSize: '11px', color: '#64748b', lineHeight: 1.5 }}>
-                Indiquez le prix en fin de ligne : <strong>Pain | 8 dh</strong> ou <strong>Harira 12 dh</strong>.
-                Alerte si un article ou le total dépasse {MENU_PRICE_LIMIT_DH} DH/résident.
+                Indiquez les plats ligne par ligne. Exemple: <strong>Salade italienne</strong> ou <strong>Pain</strong>.
               </p>
-
-              {menuBudget.exceeds && (
-                <div style={{
-                  display: 'flex', gap: '10px', alignItems: 'flex-start', padding: '12px 14px',
-                  backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px',
-                }}>
-                  <AlertTriangle size={18} color="#ef4444" style={{ flexShrink: 0, marginTop: '1px' }} />
-                  <div>
-                    <p style={{ margin: 0, fontSize: '12px', fontWeight: '700', color: '#b91c1c' }}>
-                      Dépassement du seuil de {MENU_PRICE_LIMIT_DH} DH
-                    </p>
-                    <p style={{ margin: '4px 0 0', fontSize: '11px', color: '#991b1b' }}>
-                      Total estimé : {menuBudget.total.toFixed(2)} DH/résident
-                      {menuBudget.overItems.length > 0 && (
-                        <> · Articles : {menuBudget.overItems.map((i) => i.label).join(', ')}</>
-                      )}
-                    </p>
-                  </div>
-                </div>
-              )}
 
               <div>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '6px', textTransform: 'uppercase' }}>
