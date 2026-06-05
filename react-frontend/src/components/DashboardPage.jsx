@@ -471,7 +471,7 @@ const DashboardPage = () => {
         <div style={{ flex: 1, overflowY: 'auto', paddingRight: isRtl ? '0' : '12px', paddingLeft: isRtl ? '12px' : '0' }}>
           <NavGroup title={nt.navMain} />
           <NavItem id="dashboard" icon={LayoutDashboard} label={nt.dashboard} />
-          <NavItem id="marches" icon={FileText} label={nt.marches} badge="2" />
+          <NavItem id="marches" icon={FileText} label={nt.marches} />
           <NavItem id="stock" icon={Package} label={nt.stock} />
           <NavItem id="fournisseurs" icon={Users} label={nt.fournisseurs} />
           <NavItem id="bordereau" icon={FileSpreadsheet} label={nt.bordereau} />
