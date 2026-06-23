@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use App\Models\Facture;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Arr;
@@ -13,15 +14,28 @@ use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 class FactureController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return response()->json(Facture::with('articles')->orderBy('id', 'desc')->get());
+        $query = Facture::with('articles')->orderBy('id', 'desc');
+
+        // Filter by marche_id if provided
+        if ($request->has('marche_id') && $request->marche_id) {
+            $query->where('marche_id', $request->marche_id);
+        }
+
+        return response()->json($query->get());
     }
 
     public function store(Request $request)
     {
+        $marcheId = $request->input('marche_id');
         $validated = $request->validate([
-            'numero_facture' => 'required|string|unique:factures,numero_facture',
+            'numero_facture' => [
+                'required', 'string',
+                Rule::unique('factures', 'numero_facture')->where(function ($query) use ($marcheId) {
+                    return $query->where('marche_id', $marcheId);
+                }),
+            ],
             'date_facture' => 'required|date',
             'client' => 'nullable|string',
             'ice_client' => 'nullable|string',
@@ -63,8 +77,14 @@ class FactureController extends Controller
     {
         $facture = Facture::findOrFail($id);
 
+        $marcheId = $request->input('marche_id');
         $validated = $request->validate([
-            'numero_facture' => 'required|string|unique:factures,numero_facture,' . $facture->id,
+            'numero_facture' => [
+                'required', 'string',
+                Rule::unique('factures', 'numero_facture')->where(function ($query) use ($marcheId) {
+                    return $query->where('marche_id', $marcheId);
+                })->ignore($facture->id),
+            ],
             'date_facture' => 'required|date',
             'client' => 'nullable|string',
             'ice_client' => 'nullable|string',

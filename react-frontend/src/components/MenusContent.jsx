@@ -944,54 +944,6 @@ const MenusContent = () => {
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
-                    Résidents
-                  </label>
-                  <input
-                    type="number"
-                    value={editFormData.residents}
-                    onChange={(e) => setEditFormData({ ...editFormData, residents: parseInt(e.target.value) || 0 })}
-                    style={{
-                      width: '100%', boxSizing: 'border-box', border: '1px solid #cbd5e1',
-                      borderRadius: '8px', padding: '8px', fontSize: '13px'
-                    }}
-                    required
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
-                    Kcal P.D.
-                  </label>
-                  <input
-                    type="number"
-                    value={editFormData.kcal_pd}
-                    onChange={(e) => setEditFormData({ ...editFormData, kcal_pd: parseInt(e.target.value) || 0 })}
-                    style={{
-                      width: '100%', boxSizing: 'border-box', border: '1px solid #cbd5e1',
-                      borderRadius: '8px', padding: '8px', fontSize: '13px'
-                    }}
-                    required
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
-                    Kcal Dej.
-                  </label>
-                  <input
-                    type="number"
-                    value={editFormData.kcal_dej}
-                    onChange={(e) => setEditFormData({ ...editFormData, kcal_dej: parseInt(e.target.value) || 0 })}
-                    style={{
-                      width: '100%', boxSizing: 'border-box', border: '1px solid #cbd5e1',
-                      borderRadius: '8px', padding: '8px', fontSize: '13px'
-                    }}
-                    required
-                  />
-                </div>
-              </div>
-
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' }}>
                 <button
                   type="button"

@@ -153,6 +153,7 @@ const MarchesContent = ({ filterFournisseurId, onClearFournisseurFilter }) => {
   const [selectedBcForView, setSelectedBcForView] = useState(null);
   const [bordereauItems, setBordereauItems] = useState([]);
   const [bordereauHeaders, setBordereauHeaders] = useState([]);
+  const [quantityAlerts, setQuantityAlerts] = useState([]);
 
   // Dynamic state for Bons de livraison documents
   const [bls, setBls] = useState([]);
@@ -382,12 +383,20 @@ const MarchesContent = ({ filterFournisseurId, onClearFournisseurFilter }) => {
     fetchAttachments();
     fetchFournisseurs();
     fetchBcs();
-    fetchFactures();
     fetchBordereauItems();
     fetchBordereauHeaders();
     fetchBls();
     fetchPvs();
   }, []);
+
+  // Reload factures whenever the selected marché changes
+  useEffect(() => {
+    if (selectedMarche) {
+      fetchFactures(selectedMarche.id);
+    } else {
+      setFactures([]);
+    }
+  }, [selectedMarche]);
 
   const fetchBls = async () => {
     try {
@@ -501,9 +510,10 @@ const MarchesContent = ({ filterFournisseurId, onClearFournisseurFilter }) => {
     }
   };
 
-  const fetchFactures = async () => {
+  const fetchFactures = async (marcheId) => {
     try {
-      const response = await api.get('/factures');
+      const params = marcheId ? { marche_id: marcheId } : {};
+      const response = await api.get('/factures', { params });
       setFactures(response.data);
     } catch (error) {
       console.error('Erreur lors du chargement des factures', error);
@@ -568,6 +578,57 @@ const MarchesContent = ({ filterFournisseurId, onClearFournisseurFilter }) => {
   const providerBls = bls.filter(bl => selectedMarche && bl.marche_id == selectedMarche.id);
   const providerFactures = factures.filter(f => selectedMarche && f.marche_id == selectedMarche.id);
 
+  // --- 90% Maximum Quantity Threshold Check ---
+  const checkQuantityThresholds = (itemsList) => {
+    const alerts = [];
+    itemsList.forEach(item => {
+      const priceNumber = item.price_number;
+      if (!priceNumber) return;
+
+      // Find the bordereau item to get maximum_quantity
+      const bordereauItem = bordereauItems.find(
+        bi => bi.price_number === priceNumber && bi.bordereau_header_id === associatedBordereauHeaderId
+      );
+      if (!bordereauItem || !bordereauItem.maximum_quantity) return;
+
+      const maxQty = parseFloat(bordereauItem.maximum_quantity) || 0;
+      if (maxQty <= 0) return;
+
+      // Calculate total consumed quantity from OTHER existing BCs (same marché, excluding current editing BC)
+      let consumedQty = 0;
+      providerBcs.forEach(bc => {
+        // Skip the BC being edited
+        if (editingBc && bc.id === editingBc.id) return;
+
+        const bcItems = Array.isArray(bc.items) ? bc.items : [];
+        bcItems.forEach(bcItem => {
+          if (bcItem.price_number === priceNumber) {
+            consumedQty += parseFloat(bcItem.qty ?? bcItem.quantity ?? 0);
+          }
+        });
+      });
+
+      const currentQty = parseFloat(item.qty) || 0;
+      const totalQty = consumedQty + currentQty;
+      const threshold90 = maxQty * 0.9;
+
+      if (totalQty >= threshold90) {
+        const percent = Math.min(((totalQty / maxQty) * 100), 100).toFixed(1);
+        alerts.push({
+          priceNumber,
+          designation: item.service_description || 'Produit',
+          currentQty,
+          consumedQty,
+          totalQty,
+          maxQty,
+          percent,
+          exceeded: totalQty > maxQty
+        });
+      }
+    });
+    setQuantityAlerts(alerts);
+  };
+
   const recalculateBcTotals = (itemsList) => {
     let ht = 0;
     let tva = 0;
@@ -585,6 +646,8 @@ const MarchesContent = ({ filterFournisseurId, onClearFournisseurFilter }) => {
       montantTVA: tva.toFixed(2),
       montantTTC: ttc.toFixed(2)
     }));
+    // Check thresholds after updating items
+    checkQuantityThresholds(itemsList);
   };
 
   const handleAddProductToBc = () => {
@@ -1187,11 +1250,13 @@ const MarchesContent = ({ filterFournisseurId, onClearFournisseurFilter }) => {
       } else {
         await api.post('/factures', payload);
       }
-      fetchFactures();
+      fetchFactures(selectedMarche ? selectedMarche.id : null);
       setShowFactureModal(false);
     } catch (error) {
       console.error('Erreur save facture', error.response?.data || error);
-      alert("Erreur lors de l'enregistrement de la facture: " + (error.response?.data?.message || ""));
+      const errData = error.response?.data;
+      const errMsg = errData?.message || errData?.error || JSON.stringify(errData?.errors) || error.message || "Erreur inconnue";
+      alert("Erreur lors de l'enregistrement de la facture: " + errMsg);
     }
   };
 
@@ -1199,7 +1264,7 @@ const MarchesContent = ({ filterFournisseurId, onClearFournisseurFilter }) => {
     if (window.confirm("Êtes-vous sûr de vouloir supprimer cette facture ?")) {
       try {
         await api.delete(`/factures/${id}`);
-        fetchFactures();
+        fetchFactures(selectedMarche ? selectedMarche.id : null);
       } catch (error) {
         console.error('Erreur delete facture', error);
       }
@@ -1919,7 +1984,7 @@ const MarchesContent = ({ filterFournisseurId, onClearFournisseurFilter }) => {
               onClick={() => {
                 setEditingFacture(null);
                 setNewFactureData({
-                  numero_facture: `FA-${new Date().getFullYear()}-00${factures.length + 1}`,
+                  numero_facture: `FA-${new Date().getFullYear()}-${String(factures.length + 1).padStart(3, '0')}`,
                   date_facture: new Date().toISOString().split('T')[0],
                   client: 'OFPPT / ISTA Ouarzazate',
                   site_livraison: 'ISTA Ouarzazate',
@@ -3314,6 +3379,68 @@ const MarchesContent = ({ filterFournisseurId, onClearFournisseurFilter }) => {
                 </div>
               </div>
 
+              {/* Quantity Threshold Alerts */}
+              {quantityAlerts.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '4px' }}>
+                  {quantityAlerts.map((alert, idx) => (
+                    <div key={idx} style={{
+                      display: 'flex', alignItems: 'flex-start', gap: '12px',
+                      padding: '12px 16px', borderRadius: '10px',
+                      backgroundColor: alert.exceeded ? '#fef2f2' : '#fffbeb',
+                      border: `1px solid ${alert.exceeded ? '#fecaca' : '#fde68a'}`,
+                      animation: 'slideIn 0.3s ease-out'
+                    }}>
+                      <div style={{
+                        width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0,
+                        backgroundColor: alert.exceeded ? '#fee2e2' : '#fef3c7',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '16px', marginTop: '1px'
+                      }}>
+                        {alert.exceeded ? '🚫' : '⚠️'}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{
+                          fontWeight: '700', fontSize: '13px',
+                          color: alert.exceeded ? '#991b1b' : '#92400e',
+                          marginBottom: '4px'
+                        }}>
+                          {alert.exceeded
+                            ? `Quantité maximale dépassée — N° ${alert.priceNumber}`
+                            : `Seuil de 90% atteint — N° ${alert.priceNumber}`
+                          }
+                        </div>
+                        <div style={{ fontSize: '12px', color: alert.exceeded ? '#b91c1c' : '#a16207', lineHeight: '1.5' }}>
+                          <strong>{alert.designation}</strong> : {alert.totalQty} / {alert.maxQty} ({alert.percent}%)
+                          {alert.consumedQty > 0 && (
+                            <span> — dont {alert.consumedQty} déjà commandé(s) dans d'autres BC</span>
+                          )}
+                        </div>
+                        <div style={{
+                          marginTop: '6px', height: '5px', borderRadius: '3px',
+                          backgroundColor: alert.exceeded ? '#fecaca' : '#fde68a',
+                          overflow: 'hidden'
+                        }}>
+                          <div style={{
+                            width: `${Math.min(parseFloat(alert.percent), 100)}%`,
+                            height: '100%', borderRadius: '3px',
+                            backgroundColor: alert.exceeded ? '#ef4444' : '#f59e0b',
+                            transition: 'width 0.4s ease'
+                          }} />
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setQuantityAlerts(prev => prev.filter((_, i) => i !== idx))}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: alert.exceeded ? '#b91c1c' : '#a16207', padding: '2px', fontSize: '16px', lineHeight: 1, flexShrink: 0 }}
+                        title="Fermer"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {/* Added Products Table */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <label style={{ display: 'block', fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>
@@ -3350,12 +3477,20 @@ const MarchesContent = ({ filterFournisseurId, onClearFournisseurFilter }) => {
                                 <div style={{ fontSize: '10px', color: '#94a3b8' }}>Unit&eacute;: {item.unit_of_measure}</div>
                               </td>
                               <td style={{ padding: '10px 12px', textAlign: 'center' }}>
-                                <input
-                                  type="number" min="1"
-                                  value={item.qty}
-                                  onChange={(e) => handleUpdateItem(index, 'qty', e.target.value)}
-                                  style={{ width: '60px', padding: '4px', textAlign: 'center', borderRadius: '4px', border: '1px solid #cbd5e1', outline: 'none' }}
-                                />
+                                {(() => {
+                                  const alert = quantityAlerts.find(a => a.priceNumber === item.price_number);
+                                  const borderColor = alert ? (alert.exceeded ? '#ef4444' : '#f59e0b') : '#cbd5e1';
+                                  const bgColor = alert ? (alert.exceeded ? '#fef2f2' : '#fffbeb') : 'transparent';
+                                  return (
+                                    <input
+                                      type="number" min="1"
+                                      value={item.qty}
+                                      onChange={(e) => handleUpdateItem(index, 'qty', e.target.value)}
+                                      style={{ width: '60px', padding: '4px', textAlign: 'center', borderRadius: '4px', border: `2px solid ${borderColor}`, outline: 'none', backgroundColor: bgColor, fontWeight: alert ? '700' : '400', transition: 'all 0.2s' }}
+                                      title={alert ? `${alert.totalQty} / ${alert.maxQty} (${alert.percent}%)` : ''}
+                                    />
+                                  );
+                                })()}
                               </td>
                               <td style={{ padding: '10px 12px', textAlign: 'center' }}>
                                 <input
